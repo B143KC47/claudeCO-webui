@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeftIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, CogIcon } from "@heroicons/react/24/outline";
 import type { ChatRequest, ChatMessage, ProjectInfo } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useClaudeStreaming } from "../hooks/useClaudeStreaming";
@@ -250,6 +250,10 @@ export function ChatPage() {
     navigate({ search: searchParams.toString() });
   }, [navigate]);
 
+  const handleOpenSettings = useCallback(() => {
+    navigate("/settings");
+  }, [navigate]);
+
   // Load projects to get encodedName mapping
   useEffect(() => {
     const loadProjects = async () => {
@@ -321,6 +325,13 @@ export function ChatPage() {
           </div>
           <div className="flex items-center gap-3">
             {!isHistoryView && <HistoryButton onClick={handleHistoryClick} />}
+            <button
+              onClick={handleOpenSettings}
+              className="p-2 rounded-lg glass-button glow-border"
+              aria-label="Settings"
+            >
+              <CogIcon className="w-5 h-5 text-accent" />
+            </button>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
         </div>

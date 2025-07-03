@@ -11,6 +11,8 @@ import { handleHistoriesRequest } from "./handlers/histories.ts";
 import { handleConversationRequest } from "./handlers/conversations.ts";
 import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
+import { handleMCPRequest } from "./handlers/mcp.ts";
+import { handleBillingRequest } from "./handlers/billing.ts";
 
 const args = await parseCliArgs();
 
@@ -60,6 +62,10 @@ app.post(
   "/api/chat",
   (c) => handleChatRequest(c, requestAbortControllers),
 );
+
+// Settings API routes
+app.get("/api/mcp", (c) => handleMCPRequest(c));
+app.get("/api/billing", (c) => handleBillingRequest(c));
 
 // Static file serving with SPA fallback
 // Resolve dist directory path relative to this module
