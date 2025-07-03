@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ConversationSummary } from "../../../shared/types";
 import { getHistoriesUrl } from "../config/api";
+import { BUTTON_STYLES } from "../utils/constants";
 
 interface HistoryViewProps {
   workingDirectory: string;
@@ -132,7 +133,7 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
             <div
               key={conversation.sessionId}
               onClick={() => handleConversationSelect(conversation.sessionId)}
-              className="p-4 glass-card rounded-xl hover:glow-effect smooth-transition cursor-pointer"
+              className={BUTTON_STYLES.HISTORY_ITEM}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">

@@ -26,3 +26,12 @@ export const TOOL_CONSTANTS = {
   WILDCARD_COMMAND: "*",
   DEFAULT_TOOL_NAME: "Unknown",
 } as const;
+
+// Button style constants for consistent UI
+export const BUTTON_STYLES = {
+  // Icon buttons (Settings, Theme, History)
+  ICON_BUTTON: "p-3 rounded-xl glass-button glow-border smooth-transition",
+  
+  // History session items
+  HISTORY_ITEM: "p-3 glass-card rounded-lg hover:glow-effect smooth-transition cursor-pointer",
+} as const;

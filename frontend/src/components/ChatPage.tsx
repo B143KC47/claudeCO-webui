@@ -14,7 +14,7 @@ import { ChatMessages } from "./chat/ChatMessages";
 import { PermissionDialog } from "./PermissionDialog";
 import { HistoryView } from "./HistoryView";
 import { getChatUrl, getProjectsUrl } from "../config/api";
-import { KEYBOARD_SHORTCUTS } from "../utils/constants";
+import { KEYBOARD_SHORTCUTS, BUTTON_STYLES } from "../utils/constants";
 import type { StreamingContext } from "../hooks/streaming/useMessageProcessor";
 
 export function ChatPage() {
@@ -306,7 +306,7 @@ export function ChatPage() {
             {isHistoryView && (
               <button
                 onClick={handleBackToChat}
-                className="p-2 rounded-lg glass-button glow-border"
+                className={BUTTON_STYLES.ICON_BUTTON}
                 aria-label="Back to chat"
               >
                 <ChevronLeftIcon className="w-5 h-5 text-accent" />
@@ -327,7 +327,7 @@ export function ChatPage() {
             {!isHistoryView && <HistoryButton onClick={handleHistoryClick} />}
             <button
               onClick={handleOpenSettings}
-              className="p-2 rounded-lg glass-button glow-border"
+              className={BUTTON_STYLES.ICON_BUTTON}
               aria-label="Settings"
             >
               <CogIcon className="w-5 h-5 text-accent" />
