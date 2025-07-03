@@ -1,6 +1,14 @@
 import { useEffect, useCallback, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeftIcon, CogIcon } from "@heroicons/react/24/outline";
+import { 
+  ChevronLeftIcon, 
+  CogIcon,
+  ChatBubbleLeftIcon,
+  ComputerDesktopIcon,
+  CommandLineIcon,
+  FolderIcon,
+  XMarkIcon
+} from "@heroicons/react/24/outline";
 import type { ChatRequest, ChatMessage, ProjectInfo } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useClaudeStreaming } from "../hooks/useClaudeStreaming";
@@ -13,15 +21,23 @@ import { ChatInput } from "./chat/ChatInput";
 import { ChatMessages } from "./chat/ChatMessages";
 import { PermissionDialog } from "./PermissionDialog";
 import { HistoryView } from "./HistoryView";
+import { BrowserPanel } from "./toolbar/BrowserPanel";
+import { TerminalPanel } from "./toolbar/TerminalPanel";
+import { ExplorerPanel } from "./toolbar/ExplorerPanel";
 import { getChatUrl, getProjectsUrl } from "../config/api";
 import { KEYBOARD_SHORTCUTS, BUTTON_STYLES } from "../utils/constants";
 import type { StreamingContext } from "../hooks/streaming/useMessageProcessor";
+
+// Tab type definition
+type MainTab = "chat" | "browser" | "terminal" | "explorer";
 
 export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  const [activeTab, setActiveTab] = useState<MainTab>("chat");
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
 
   // Extract and normalize working directory from URL
   const workingDirectory = (() => {
@@ -298,10 +314,10 @@ export function ChatPage() {
   }, [isLoading, currentRequestId, handleAbort]);
 
   return (
-    <div className="min-h-screen bg-black-primary smooth-transition">
-      <div className="max-w-6xl mx-auto p-6 h-screen flex flex-col">
+    <div className="fullscreen-page mobile-optimized">
+      <div className="w-full h-full flex flex-col px-2 sm:px-4 md:px-6 py-4 md:py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4 md:mb-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             {isHistoryView && (
               <button
@@ -345,18 +361,130 @@ export function ChatPage() {
           />
         ) : (
           <>
-            {/* Chat Messages */}
-            <ChatMessages messages={messages} isLoading={isLoading} />
+            {/* Tab Navigation */}
+            <div className="flex-1 glass-card rounded-xl glow-effect flex flex-col min-h-0">
+              {/* Tab Header */}
+              <div className="flex items-center justify-between border-b border-accent/20 px-3 md:px-4 py-2 md:py-3 flex-shrink-0">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveTab("chat")}
+                    className={`
+                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      ${activeTab === "chat" 
+                        ? "bg-gradient-primary text-primary glow-effect" 
+                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      }
+                    `}
+                  >
+                    <ChatBubbleLeftIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Chat</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("browser")}
+                    className={`
+                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      ${activeTab === "browser" 
+                        ? "bg-gradient-primary text-primary glow-effect" 
+                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      }
+                    `}
+                  >
+                    <ComputerDesktopIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Browser</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("terminal")}
+                    className={`
+                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      ${activeTab === "terminal" 
+                        ? "bg-gradient-primary text-primary glow-effect" 
+                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      }
+                    `}
+                  >
+                    <CommandLineIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Terminal</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("explorer")}
+                    className={`
+                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      ${activeTab === "explorer" 
+                        ? "bg-gradient-primary text-primary glow-effect" 
+                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      }
+                    `}
+                  >
+                    <FolderIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Explorer</span>
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+                  className="p-2 text-tertiary hover:text-primary smooth-transition rounded-lg hover:bg-black-secondary/50"
+                  aria-label={isToolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              </div>
 
-            {/* Input */}
-            <ChatInput
-              input={input}
-              isLoading={isLoading}
-              currentRequestId={currentRequestId}
-              onInputChange={setInput}
-              onSubmit={() => sendMessage()}
-              onAbort={handleAbort}
-            />
+              {/* Panel Content */}
+              {!isToolbarCollapsed && (
+                <div className="flex-1 p-3 md:p-4 min-h-0">
+                  {/* Chat Interface */}
+                  {activeTab === "chat" && (
+                    <div className="h-full flex flex-col space-y-3 md:space-y-4 min-h-0">
+                      {/* Chat Messages */}
+                      <ChatMessages messages={messages} isLoading={isLoading} />
+                      
+                      {/* Chat Input */}
+                      <ChatInput
+                        input={input}
+                        isLoading={isLoading}
+                        currentRequestId={currentRequestId}
+                        onInputChange={setInput}
+                        onSubmit={() => sendMessage()}
+                        onAbort={handleAbort}
+                      />
+                    </div>
+                  )}
+
+                  {/* Browser Panel */}
+                  {activeTab === "browser" && (
+                    <div className="h-full">
+                      <BrowserPanel />
+                    </div>
+                  )}
+
+                  {/* Terminal Panel */}
+                  {activeTab === "terminal" && (
+                    <div className="h-full">
+                      <TerminalPanel workingDirectory={workingDirectory} />
+                    </div>
+                  )}
+
+                  {/* Explorer Panel */}
+                  {activeTab === "explorer" && (
+                    <div className="h-full">
+                      <ExplorerPanel workingDirectory={workingDirectory} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Collapsed State */}
+            {isToolbarCollapsed && (
+              <div className="mb-2 md:mb-4">
+                <button
+                  onClick={() => setIsToolbarCollapsed(false)}
+                  className="px-3 py-2 glass-button glow-border smooth-transition rounded-lg text-sm text-secondary hover:text-primary"
+                >
+                  Show Toolbar
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

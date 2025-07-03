@@ -72,10 +72,91 @@
   --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* 全屏布局基础设置 */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 防止页面滚动 */
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* 全屏容器类 */
+.fullscreen-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* 全屏页面类 */
+.fullscreen-page {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* 移动端优化类 */
+.mobile-optimized {
+  /* 确保在移动设备上正确显示 */
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+}
+
+/* 响应式断点 */
+@media (max-width: 768px) {
+  /* 移动端样式调整 */
+  .mobile-padding {
+    padding: 0.75rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .mobile-spacing {
+    gap: 0.5rem;
+  }
+  
+  /* 移动端按钮优化 */
+  .mobile-button {
+    min-height: 44px; /* 苹果推荐的最小触控目标 */
+    padding: 0.75rem 1rem;
+  }
+  
+  /* 移动端输入框优化 */
+  .mobile-input {
+    font-size: 16px; /* 防止iOS缩放 */
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 小屏设备进一步优化 */
+  .mobile-padding {
+    padding: 0.5rem;
+  }
+  
+  .mobile-text-xs {
+    font-size: 0.75rem;
+  }
+}
+
 /* 全局样式重置 */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--accent-primary) var(--bg-secondary);
+  box-sizing: border-box;
 }
 
 /* Webkit浏览器滚动条样式 */
