@@ -10,6 +10,7 @@ import type { ChatRequest, StreamResponse } from "../../shared/types.ts";
  * @param sessionId - Optional session ID for conversation continuity
  * @param allowedTools - Optional array of allowed tool names
  * @param workingDirectory - Optional working directory for Claude execution
+ * @param thinking - Optional thinking configuration for Claude
  * @param debugMode - Enable debug logging
  * @returns AsyncGenerator yielding StreamResponse objects
  */
@@ -20,6 +21,7 @@ async function* executeClaudeCommand(
   sessionId?: string,
   allowedTools?: string[],
   workingDirectory?: string,
+  thinking?: { type: "enabled"; budget_tokens: number },
   debugMode?: boolean,
 ): AsyncGenerator<StreamResponse> {
   let abortController: AbortController;
@@ -57,6 +59,7 @@ async function* executeClaudeCommand(
           ...(sessionId ? { resume: sessionId } : {}),
           ...(allowedTools ? { allowedTools } : {}),
           ...(workingDirectory ? { cwd: workingDirectory } : {}),
+          ...(thinking ? { thinking } : {}),
         },
       })
     ) {
@@ -123,6 +126,7 @@ export async function handleChatRequest(
             chatRequest.sessionId,
             chatRequest.allowedTools,
             chatRequest.workingDirectory,
+            chatRequest.thinking,
             debugMode,
           )
         ) {

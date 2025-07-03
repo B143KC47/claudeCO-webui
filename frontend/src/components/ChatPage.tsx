@@ -10,6 +10,7 @@ import {
   XMarkIcon
 } from "@heroicons/react/24/outline";
 import type { ChatRequest, ChatMessage, ProjectInfo } from "../types";
+import { THINKING_MODE_CONFIGS } from "../types";
 import { useTheme } from "../hooks/useTheme";
 import { useClaudeStreaming } from "../hooks/useClaudeStreaming";
 import { useChatState } from "../hooks/chat/useChatState";
@@ -19,6 +20,7 @@ import { ThemeToggle } from "./chat/ThemeToggle";
 import { HistoryButton } from "./chat/HistoryButton";
 import { ChatInput } from "./chat/ChatInput";
 import { ChatMessages } from "./chat/ChatMessages";
+import { ThinkingModeSelector } from "./chat/ThinkingModeSelector";
 import { PermissionDialog } from "./PermissionDialog";
 import { HistoryView } from "./HistoryView";
 import { BrowserPanel } from "./toolbar/BrowserPanel";
@@ -68,11 +70,13 @@ export function ChatPage() {
     currentRequestId,
     hasShownInitMessage,
     currentAssistantMessage,
+    thinkingMode,
     setInput,
     setCurrentSessionId,
     setHasShownInitMessage,
     setHasReceivedInit,
     setCurrentAssistantMessage,
+    setThinkingMode,
     addMessage,
     updateLastMessage,
     clearInput,
@@ -123,6 +127,14 @@ export function ChatPage() {
       startRequest();
 
       try {
+        // Prepare thinking configuration
+        const thinkingConfig = thinkingMode !== "auto" 
+          ? {
+              type: "enabled" as const,
+              budget_tokens: THINKING_MODE_CONFIGS[thinkingMode].budgetTokens,
+            }
+          : undefined;
+
         const response = await fetch(getChatUrl(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -132,6 +144,7 @@ export function ChatPage() {
             ...(currentSessionId ? { sessionId: currentSessionId } : {}),
             allowedTools: tools || allowedTools,
             ...(workingDirectory ? { workingDirectory } : {}),
+            ...(thinkingConfig ? { thinking: thinkingConfig } : {}),
           } as ChatRequest),
         });
 
@@ -200,6 +213,7 @@ export function ChatPage() {
       hasShownInitMessage,
       currentAssistantMessage,
       workingDirectory,
+      thinkingMode,
       generateRequestId,
       clearInput,
       startRequest,
@@ -437,6 +451,15 @@ export function ChatPage() {
                     <div className="h-full flex flex-col space-y-3 md:space-y-4 min-h-0">
                       {/* Chat Messages */}
                       <ChatMessages messages={messages} isLoading={isLoading} />
+                      
+                      {/* Thinking Mode Selector */}
+                      <div className="flex-shrink-0">
+                        <ThinkingModeSelector
+                          value={thinkingMode}
+                          onChange={setThinkingMode}
+                          disabled={isLoading}
+                        />
+                      </div>
                       
                       {/* Chat Input */}
                       <ChatInput

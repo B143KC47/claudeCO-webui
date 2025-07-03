@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { AllMessage, ChatMessage } from "../../types";
+import type { AllMessage, ChatMessage, ThinkingMode } from "../../types";
 import { generateId } from "../../utils/id";
 
 export function useChatState() {
@@ -12,6 +12,7 @@ export function useChatState() {
   const [hasReceivedInit, setHasReceivedInit] = useState(false);
   const [currentAssistantMessage, setCurrentAssistantMessage] =
     useState<ChatMessage | null>(null);
+  const [thinkingMode, setThinkingMode] = useState<ThinkingMode>("auto");
 
   const addMessage = useCallback((msg: AllMessage) => {
     setMessages((prev) => [...prev, msg]);
@@ -59,6 +60,7 @@ export function useChatState() {
     hasShownInitMessage,
     hasReceivedInit,
     currentAssistantMessage,
+    thinkingMode,
 
     // State setters
     setMessages,
@@ -69,6 +71,7 @@ export function useChatState() {
     setHasShownInitMessage,
     setHasReceivedInit,
     setCurrentAssistantMessage,
+    setThinkingMode,
 
     // Helper functions
     addMessage,

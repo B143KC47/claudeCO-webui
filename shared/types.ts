@@ -10,6 +10,10 @@ export interface ChatRequest {
   requestId: string;
   allowedTools?: string[];
   workingDirectory?: string;
+  thinking?: {
+    type: "enabled";
+    budget_tokens: number;
+  };
 }
 
 export interface AbortRequest {

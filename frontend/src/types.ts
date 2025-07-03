@@ -5,6 +5,32 @@ import type {
   SDKResultMessage,
 } from "@anthropic-ai/claude-code";
 
+// Thinking mode types
+export type ThinkingMode = "auto" | "think" | "think_hard" | "think_harder" | "ultrathink";
+
+export interface ThinkingConfig {
+  mode: ThinkingMode;
+  budgetTokens: number;
+}
+
+// Thinking mode configurations based on research findings
+export const THINKING_MODE_CONFIGS: Record<ThinkingMode, ThinkingConfig> = {
+  auto: { mode: "auto", budgetTokens: 0 }, // No thinking mode
+  think: { mode: "think", budgetTokens: 4000 },
+  think_hard: { mode: "think_hard", budgetTokens: 10000 },
+  think_harder: { mode: "think_harder", budgetTokens: 31999 },
+  ultrathink: { mode: "ultrathink", budgetTokens: 31999 },
+};
+
+// Thinking mode labels for UI
+export const THINKING_MODE_LABELS: Record<ThinkingMode, string> = {
+  auto: "Auto",
+  think: "Think",
+  think_hard: "Think Hard", 
+  think_harder: "Think Harder",
+  ultrathink: "Ultrathink",
+};
+
 // Chat message for user/assistant interactions (not part of SDKMessage)
 export interface ChatMessage {
   type: "chat";
