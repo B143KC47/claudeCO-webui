@@ -67,7 +67,103 @@ This project consists of three main components:
   - Optional `allowedTools` array restricts which tools Claude can use
   - Optional `workingDirectory` specifies the project directory for Claude execution
 - `POST /api/abort/:requestId` - Aborts an ongoing request by request ID
+- `GET /api/mcp/smithery` - Fetches available MCP servers from Smithery.ai registry
+  - Query parameters: `search` (filter by name/description), `category` (filter by category)
+  - Response: `{ servers: SmitheryServer[], total: number }`
+  - Supports both real API integration (with SMITHERY_API_TOKEN) and mock data fallback
+- `POST /api/mcp/install` - Installs a Smithery.ai MCP server
+  - Request body: `{ serverId: string, serverName: string, serverUrl: string }`
+- `DELETE /api/mcp/uninstall` - Uninstalls an MCP server
+  - Request body: `{ serverName: string }`
 - `/*` - Serves static frontend files (in single binary mode)
+
+**Smithery.ai API Integration**:
+
+The backend supports real-time integration with the Smithery.ai registry to browse and install MCP servers. This feature can operate in two modes:
+
+1. **Real API Mode** (recommended): Uses authentic Smithery.ai API data
+   - Requires `SMITHERY_API_TOKEN` environment variable
+   - Fetches live server information from `https://registry.smithery.ai/servers`
+   - Provides up-to-date server listings, usage statistics, and success rates
+   - Supports search and category filtering
+
+2. **Mock Data Mode** (fallback): Uses simulated server data
+   - Automatically activated when `SMITHERY_API_TOKEN` is not set
+   - Provides sample servers for development and testing
+   - Issues a warning message to indicate mock mode usage
+
+**Setting up Smithery.ai API Integration**:
+
+1. Obtain an API token from Smithery.ai (visit [smithery.ai](https://smithery.ai) for details)
+2. Set the environment variable:
+   ```bash
+   export SMITHERY_API_TOKEN="your-smithery-api-token-here"
+   ```
+3. Restart the backend server
+4. The Smithery.ai browser in Settings → MCP tab will now show real server data
+
+**Features**:
+- **Automatic Fallback**: Gracefully falls back to mock data if API is unavailable
+- **Error Handling**: Handles authentication errors, rate limits, and network issues
+- **Search & Filter**: Supports text search and category-based filtering
+- **Real-time Data**: Shows current usage statistics and success rates
+- **Timeout Protection**: 10-second timeout prevents hanging requests
+
+**GitHub OAuth Integration for Smithery**:
+
+The application now supports GitHub OAuth login to access Smithery.ai servers, providing a more user-friendly alternative to manual API token configuration.
+
+**Setting up GitHub OAuth**:
+
+1. **Create a GitHub OAuth App**:
+   - Go to [GitHub Developer Settings](https://github.com/settings/developers)
+   - Click "New OAuth App"
+   - Fill in the application details:
+     ```
+     Application name: Claude Code WebUI Smithery Integration
+     Homepage URL: http://localhost:8080 (or your domain)
+     Authorization callback URL: http://localhost:8080/settings
+     ```
+   - Click "Register application"
+   - Note down the **Client ID** and generate a **Client Secret**
+
+2. **Configure Environment Variables**:
+   ```bash
+   export GITHUB_CLIENT_ID="your-github-client-id"
+   export GITHUB_CLIENT_SECRET="your-github-client-secret"
+   export GITHUB_REDIRECT_URI="http://localhost:8080/settings"  # Optional, defaults to BASE_URL/settings
+   export BASE_URL="http://localhost:8080"  # Optional, defaults to localhost:8080
+   ```
+
+3. **Restart the Backend Server**:
+   ```bash
+   cd backend
+   deno task dev
+   ```
+
+**Using GitHub OAuth**:
+
+1. Navigate to **Settings → MCP** in the web interface
+2. Click on the **Browse** tab to access Smithery servers
+3. Click "使用GitHub登录" (Sign in with GitHub)
+4. Authorize the application on GitHub
+5. You'll be redirected back and automatically logged in
+6. Browse and install Smithery.ai MCP servers
+
+**OAuth Features**:
+- **Secure Authentication**: Uses GitHub OAuth 2.0 flow with state parameter for CSRF protection
+- **Token Storage**: Safely stores authentication tokens in browser localStorage
+- **Auto-Login**: Remembers authentication state across browser sessions
+- **Fallback Support**: Manual API token input remains available as an alternative
+- **Error Handling**: Comprehensive error handling for authentication failures
+- **Privacy Protection**: Only requests user:email scope, doesn't access private repositories
+
+**Environment Variables Summary**:
+- `GITHUB_CLIENT_ID` - Required for OAuth functionality
+- `GITHUB_CLIENT_SECRET` - Required for OAuth functionality  
+- `GITHUB_REDIRECT_URI` - Optional, redirect URL for OAuth callback
+- `BASE_URL` - Optional, base URL for your application
+- `SMITHERY_API_TOKEN` - Optional, direct API token (fallback when OAuth not configured)
 
 ### Frontend (React)
 

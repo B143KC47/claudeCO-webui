@@ -11,8 +11,13 @@ import { handleHistoriesRequest } from "./handlers/histories.ts";
 import { handleConversationRequest } from "./handlers/conversations.ts";
 import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
-import { handleMCPRequest } from "./handlers/mcp.ts";
+import { handleMCP } from "./handlers/mcp.ts";
 import { handleBillingRequest } from "./handlers/billing.ts";
+import { 
+  handleGitHubAuthUrl, 
+  handleGitHubAuthCallback, 
+  handleSmitheryTokenVerify 
+} from "./handlers/auth.ts";
 
 const args = await parseCliArgs();
 
@@ -32,7 +37,7 @@ app.use(
   "*",
   cors({
     origin: "*",
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type"],
   }),
 );
@@ -63,8 +68,62 @@ app.post(
   (c) => handleChatRequest(c, requestAbortControllers),
 );
 
+// Authentication API routes
+app.post("/api/auth/github/url", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleGitHubAuthUrl(ctx);
+  return response;
+});
+
+app.post("/api/auth/github/callback", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleGitHubAuthCallback(ctx);
+  return response;
+});
+
+app.post("/api/auth/smithery/verify", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleSmitheryTokenVerify(ctx);
+  return response;
+});
+
 // Settings API routes
-app.get("/api/mcp", (c) => handleMCPRequest(c));
+app.get("/api/mcp", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.get("/api/mcp/smithery", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.post("/api/mcp/install", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.delete("/api/mcp/uninstall", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.put("/api/mcp/update", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.get("/api/mcp/categories", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
 app.get("/api/billing", (c) => handleBillingRequest(c));
 
 // Static file serving with SPA fallback
