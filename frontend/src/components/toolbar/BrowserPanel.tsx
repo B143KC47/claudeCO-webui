@@ -89,9 +89,9 @@ export function BrowserPanel() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col space-y-4">
       {/* Navigation Controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={handleBack}
           disabled={historyIndex <= 0}
@@ -128,7 +128,7 @@ export function BrowserPanel() {
       </div>
 
       {/* Address Bar */}
-      <form onSubmit={handleUrlSubmit} className="flex items-center gap-2">
+      <form onSubmit={handleUrlSubmit} className="flex items-center gap-2 flex-shrink-0">
         <div className="flex-1 relative">
           <input
             type="text"
@@ -148,8 +148,8 @@ export function BrowserPanel() {
       </form>
 
       {/* Browser Frame */}
-      <div className="relative">
-        <div className="glass-card rounded-lg overflow-hidden" style={{ height: "400px" }}>
+      <div className="flex-1 relative min-h-0">
+        <div className="h-full glass-card rounded-lg overflow-hidden relative">
           {isLoading && (
             <div className="absolute inset-0 bg-black-primary/50 flex items-center justify-center z-10">
               <div className="flex items-center gap-3 text-primary">
@@ -171,9 +171,9 @@ export function BrowserPanel() {
         </div>
         
         {/* Status Bar */}
-        <div className="mt-2 text-xs text-tertiary flex items-center justify-between">
-          <span>Loaded: {url}</span>
-          <span className="flex items-center gap-1">
+        <div className="absolute bottom-2 left-2 right-2 text-xs text-tertiary flex items-center justify-between bg-black-primary/80 backdrop-blur-sm rounded px-2 py-1">
+          <span className="truncate flex-1 mr-2">Loaded: {url}</span>
+          <span className="flex items-center gap-1 flex-shrink-0">
             <div className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500" : "bg-green-500"}`} />
             {isLoading ? "Loading" : "Ready"}
           </span>

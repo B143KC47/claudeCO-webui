@@ -67,7 +67,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto glass-card p-6 mb-6 rounded-2xl glow-effect flex flex-col"
+      className="flex-1 overflow-y-auto glass-card p-4 md:p-6 rounded-2xl glow-effect flex flex-col min-h-0"
     >
       {messages.length === 0 ? (
         <EmptyState />

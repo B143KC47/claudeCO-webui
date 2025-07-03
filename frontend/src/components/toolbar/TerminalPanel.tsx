@@ -43,6 +43,11 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     inputRef.current?.focus();
   };
 
+  // Get terminal prompt string
+  const getPrompt = () => {
+    return `claude-user@localhost:${workingDirectory}$ `;
+  };
+
   // Simulate command execution
   const executeCommand = (command: string): string => {
     const cmd = command.trim().toLowerCase();
@@ -173,9 +178,9 @@ node_modules/
   };
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col space-y-4">
       {/* Terminal Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 text-secondary text-sm">
           <CommandLineIcon className="w-4 h-4 text-accent" />
           <span>Terminal - {workingDirectory}</span>
@@ -196,69 +201,73 @@ node_modules/
       <div 
         ref={terminalRef}
         onClick={handleTerminalClick}
-        className="glass-card rounded-lg p-4 font-mono text-sm cursor-text"
-        style={{ height: "400px", overflowY: "auto" }}
+        className="flex-1 glass-card rounded-lg p-4 font-mono text-sm cursor-text overflow-y-auto min-h-0"
       >
-        {entries.map((entry) => (
-          <div key={entry.id} className="mb-2 group">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                {entry.type === "command" && (
-                  <div className="flex items-center gap-2 text-accent">
-                    <span className="text-green-400">$</span>
-                    <span className="text-primary">{entry.content}</span>
-                  </div>
-                )}
-                
-                {entry.type === "output" && (
-                  <div className="text-secondary whitespace-pre-wrap ml-4">
-                    {entry.content}
-                  </div>
-                )}
-                
-                {entry.type === "error" && (
-                  <div className="text-red-400 whitespace-pre-wrap ml-4">
-                    {entry.content}
-                  </div>
-                )}
-              </div>
+        {/* Terminal Content */}
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="flex flex-col">
+              {entry.type === "command" && (
+                <div className="flex items-start gap-2">
+                  <span className="text-accent font-medium flex-shrink-0">
+                    {getPrompt()}
+                  </span>
+                  <span className="text-primary">{entry.content}</span>
+                  <button
+                    onClick={() => copyEntry(entry.content)}
+                    className="ml-auto opacity-0 group-hover:opacity-100 hover:text-accent smooth-transition p-1"
+                    aria-label="Copy command"
+                  >
+                    <DocumentDuplicateIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
               
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 smooth-transition">
-                <span className="text-xs text-tertiary">
-                  {formatTimestamp(entry.timestamp)}
-                </span>
-                <button
-                  onClick={() => copyEntry(entry.content)}
-                  className="p-1 hover:bg-black-secondary/50 rounded"
-                  aria-label="Copy"
-                >
-                  <DocumentDuplicateIcon className="w-3 h-3 text-tertiary" />
-                </button>
-              </div>
+              {entry.type === "output" && (
+                <div className="group flex items-start gap-2">
+                  <span className="text-secondary whitespace-pre-wrap">{entry.content}</span>
+                  <button
+                    onClick={() => copyEntry(entry.content)}
+                    className="ml-auto opacity-0 group-hover:opacity-100 hover:text-accent smooth-transition p-1"
+                    aria-label="Copy output"
+                  >
+                    <DocumentDuplicateIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              
+              {entry.type === "error" && (
+                <div className="group flex items-start gap-2">
+                  <span className="text-red-400 whitespace-pre-wrap">{entry.content}</span>
+                  <button
+                    onClick={() => copyEntry(entry.content)}
+                    className="ml-auto opacity-0 group-hover:opacity-100 hover:text-accent smooth-transition p-1"
+                    aria-label="Copy error"
+                  >
+                    <DocumentDuplicateIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-        
-        {/* Command Input */}
-        <form onSubmit={handleCommandSubmit} className="flex items-center gap-2">
-          <span className="text-green-400">$</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={currentCommand}
-            onChange={(e) => setCurrentCommand(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-primary outline-none font-mono"
-            placeholder="Type a command..."
-            autoFocus
-          />
-        </form>
-      </div>
-      
-      {/* Status Bar */}
-      <div className="text-xs text-tertiary flex items-center justify-between">
-        <span>Commands: {commandHistory.length}</span>
-        <span>Use ↑/↓ arrows to navigate history</span>
+          ))}
+          
+          {/* Current command input */}
+          <form onSubmit={handleCommandSubmit} className="flex items-center gap-2">
+            <span className="text-accent font-medium flex-shrink-0">
+              {getPrompt()}
+            </span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={currentCommand}
+              onChange={(e) => setCurrentCommand(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 bg-transparent text-primary outline-none"
+              placeholder=""
+              autoComplete="off"
+            />
+          </form>
+        </div>
       </div>
     </div>
   );
