@@ -16,8 +16,8 @@ interface ChatMessageComponentProps {
 export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
   const isUser = message.role === "user";
   const colorScheme = isUser
-    ? "bg-blue-600 text-white"
-    : "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100";
+    ? "bg-gradient-primary text-primary"
+    : "bg-black-quaternary text-primary border-accent";
 
   return (
     <MessageContainer
@@ -27,7 +27,7 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
       <div className="mb-2 flex items-center justify-between gap-4">
         <div
           className={`text-xs font-semibold opacity-90 ${
-            isUser ? "text-blue-100" : "text-slate-600 dark:text-slate-400"
+            isUser ? "text-primary" : "text-accent"
           }`}
         >
           {isUser ? "User" : "Claude"}
@@ -35,7 +35,7 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
         <TimestampComponent
           timestamp={message.timestamp}
           className={`text-xs opacity-70 ${
-            isUser ? "text-blue-200" : "text-slate-500 dark:text-slate-500"
+            isUser ? "text-primary" : "text-tertiary"
           }`}
         />
       </div>
@@ -92,12 +92,12 @@ export function SystemMessageComponent({
       label={getLabel()}
       details={details}
       badge={message.subtype}
-      icon={<span className="bg-blue-400 dark:bg-blue-500">⚙</span>}
+      icon={<span className="bg-accent">⚙</span>}
       colorScheme={{
-        header: "text-blue-800 dark:text-blue-300",
-        content: "text-blue-700 dark:text-blue-300",
-        border: "border-blue-200 dark:border-blue-700",
-        bg: "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800",
+        header: "text-accent",
+        content: "text-secondary",
+        border: "border-accent",
+        bg: "glass-card",
       }}
     />
   );
@@ -111,10 +111,10 @@ export function ToolMessageComponent({ message }: ToolMessageComponentProps) {
   return (
     <MessageContainer
       alignment="left"
-      colorScheme="bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100"
+      colorScheme="bg-black-quaternary text-accent border-accent"
     >
-      <div className="text-xs font-semibold mb-2 opacity-90 text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-        <div className="w-4 h-4 bg-emerald-500 dark:bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs">
+      <div className="text-xs font-semibold mb-2 opacity-90 text-accent flex items-center gap-2">
+        <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center text-primary text-xs">
           🔧
         </div>
         {message.content}
@@ -135,12 +135,12 @@ export function ToolResultMessageComponent({
       label={message.toolName}
       details={message.content}
       badge={message.summary}
-      icon={<span className="bg-emerald-400 dark:bg-emerald-500">✓</span>}
+      icon={<span className="bg-accent">✓</span>}
       colorScheme={{
-        header: "text-emerald-800 dark:text-emerald-300",
-        content: "text-emerald-700 dark:text-emerald-300",
-        border: "border-emerald-200 dark:border-emerald-700",
-        bg: "bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800",
+        header: "text-accent",
+        content: "text-secondary",
+        border: "border-accent",
+        bg: "glass-card",
       }}
     />
   );
@@ -150,14 +150,14 @@ export function LoadingComponent() {
   return (
     <MessageContainer
       alignment="left"
-      colorScheme="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+      colorScheme="bg-black-quaternary text-primary border-accent"
     >
-      <div className="text-xs font-semibold mb-2 opacity-90 text-slate-600 dark:text-slate-400">
+      <div className="text-xs font-semibold mb-2 opacity-90 text-accent">
         Claude
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-        <span className="animate-pulse">Thinking...</span>
+        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+        <span className="animate-pulse text-accent">Thinking...</span>
       </div>
     </MessageContainer>
   );

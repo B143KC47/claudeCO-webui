@@ -1,3 +1,248 @@
 @import "tailwindcss";
 
 @variant dark (.dark &);
+
+/* 纯黑+橙红主题配色系统 */
+:root {
+  /* 主色调 - 纯黑色系 */
+  --bg-primary: #000000;          /* 纯黑色主背景 */
+  --bg-secondary: #0a0a0a;        /* 深黑色次要背景 */
+  --bg-tertiary: #111111;         /* 稍浅的黑色 */
+  --bg-quaternary: #1a1a1a;       /* 组件背景 */
+  
+  /* 橙红色系 - 强调色 */
+  --accent-primary: #ff6b35;      /* 明亮橙色 - 主强调 */
+  --accent-secondary: #ff4757;    /* 橙红色 - 次要强调 */
+  --accent-tertiary: #c44569;     /* 深橙红 - 深色强调 */
+  --accent-hover: #ff8f65;        /* 悬浮状态 */
+  
+  /* 文本颜色 */
+  --text-primary: #ffffff;        /* 主要文本 */
+  --text-secondary: #e0e0e0;      /* 次要文本 */
+  --text-tertiary: #a0a0a0;       /* 三级文本 */
+  --text-disabled: #666666;       /* 禁用文本 */
+  
+  /* 边框和分隔线 */
+  --border-primary: #333333;      /* 主要边框 */
+  --border-secondary: #222222;    /* 次要边框 */
+  --border-accent: #ff6b35;       /* 强调边框 */
+  
+  /* 渐变色 */
+  --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #ff4757 100%);
+  --gradient-secondary: linear-gradient(135deg, #ff4757 0%, #c44569 100%);
+  --gradient-subtle: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 71, 87, 0.1) 100%);
+  
+  /* 玻璃态效果变量 */
+  --glass-bg: rgba(26, 26, 26, 0.8);
+  --glass-border: rgba(255, 107, 53, 0.2);
+  --glass-backdrop: blur(12px);
+  
+  /* 阴影 */
+  --shadow-primary: 0 4px 20px rgba(255, 107, 53, 0.3);
+  --shadow-secondary: 0 2px 10px rgba(255, 107, 53, 0.2);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 亮色主题变量 */
+:root:not(.dark) {
+  /* 亮色主题背景 */
+  --bg-primary: #ffffff;          /* 白色主背景 */
+  --bg-secondary: #f8f9fa;        /* 浅灰色次要背景 */
+  --bg-tertiary: #f1f3f4;         /* 稍深的灰色 */
+  --bg-quaternary: #e8eaed;       /* 组件背景 */
+  
+  /* 亮色主题文本 */
+  --text-primary: #1a1a1a;        /* 深色主要文本 */
+  --text-secondary: #4a4a4a;      /* 深灰色次要文本 */
+  --text-tertiary: #6a6a6a;       /* 中灰色三级文本 */
+  --text-disabled: #9a9a9a;       /* 浅灰色禁用文本 */
+  
+  /* 亮色主题边框 */
+  --border-primary: #d1d5db;      /* 浅灰色主要边框 */
+  --border-secondary: #e5e7eb;    /* 更浅的次要边框 */
+  
+  /* 亮色主题玻璃态效果 */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 107, 53, 0.3);
+  
+  /* 亮色主题阴影 */
+  --shadow-primary: 0 4px 20px rgba(255, 107, 53, 0.2);
+  --shadow-secondary: 0 2px 10px rgba(255, 107, 53, 0.15);
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 全局样式重置 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary) var(--bg-secondary);
+}
+
+/* Webkit浏览器滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
+}
+
+/* 自定义工具类 */
+.bg-black-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-black-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-black-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.bg-black-quaternary {
+  background-color: var(--bg-quaternary);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.text-accent {
+  color: var(--accent-primary);
+}
+
+.border-accent {
+  border-color: var(--border-accent);
+}
+
+/* 渐变背景类 */
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-secondary {
+  background: var(--gradient-secondary);
+}
+
+.bg-gradient-subtle {
+  background: var(--gradient-subtle);
+}
+
+/* 玻璃态效果类 */
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border-radius: 16px;
+}
+
+.glass-button {
+  background: rgba(255, 107, 53, 0.1);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+}
+
+.glass-button:hover {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: rgba(255, 107, 53, 0.5);
+  box-shadow: var(--shadow-secondary);
+  transform: translateY(-1px);
+}
+
+.glass-input {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+}
+
+.glass-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  outline: none;
+}
+
+/* 动画和过渡效果 */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-effect {
+  box-shadow: var(--shadow-primary);
+}
+
+.glow-effect:hover {
+  box-shadow: 0 6px 30px rgba(255, 107, 53, 0.4);
+}
+
+/* 脉冲动画 */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(255, 107, 53, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.8);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* 渐变文字效果 */
+.text-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 特殊效果：发光边框 */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--gradient-primary);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.glow-border:hover::before {
+  opacity: 1;
+}
+
+/* 深色主题覆盖（保持向后兼容） */
+.dark {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}

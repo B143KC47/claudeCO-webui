@@ -55,8 +55,8 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-secondary">
             {!encodedName ? "Loading project..." : "Loading conversations..."}
           </p>
         </div>
@@ -68,9 +68,9 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-primary rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-red-500"
+              className="w-8 h-8 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -83,10 +83,10 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
               />
             </svg>
           </div>
-          <h2 className="text-slate-800 dark:text-slate-100 text-xl font-semibold mb-2">
+          <h2 className="text-primary text-xl font-semibold mb-2">
             Error Loading History
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
+          <p className="text-secondary text-sm mb-4">
             {error}
           </p>
         </div>
@@ -98,9 +98,9 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 glass-card rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-slate-400 dark:text-slate-500"
+              className="w-8 h-8 text-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -113,10 +113,10 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
               />
             </svg>
           </div>
-          <h2 className="text-slate-800 dark:text-slate-100 text-xl font-semibold mb-2">
+          <h2 className="text-primary text-xl font-semibold mb-2">
             No Conversations Yet
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm max-w-sm">
+          <p className="text-secondary text-sm max-w-sm">
             Start chatting to see your conversation history here.
           </p>
         </div>
@@ -132,24 +132,24 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
             <div
               key={conversation.sessionId}
               onClick={() => handleConversationSelect(conversation.sessionId)}
-              className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-pointer shadow-sm hover:shadow-md"
+              className="p-4 glass-card rounded-xl hover:glow-effect smooth-transition cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                  <h3 className="text-sm font-medium text-primary truncate">
                     Session: {conversation.sessionId.substring(0, 8)}...
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-tertiary mt-1">
                     {new Date(conversation.startTime).toLocaleString()} •{" "}
                     {conversation.messageCount} messages
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 line-clamp-2">
+                  <p className="text-sm text-secondary mt-2 line-clamp-2">
                     {conversation.lastMessagePreview}
                   </p>
                 </div>
                 <div className="ml-4 flex-shrink-0">
                   <svg
-                    className="w-5 h-5 text-slate-400"
+                    className="w-5 h-5 text-accent"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

@@ -294,7 +294,7 @@ export function ChatPage() {
   }, [isLoading, currentRequestId, handleAbort]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    <div className="min-h-screen bg-black-primary smooth-transition">
       <div className="max-w-6xl mx-auto p-6 h-screen flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 flex-shrink-0">
@@ -302,18 +302,18 @@ export function ChatPage() {
             {isHistoryView && (
               <button
                 onClick={handleBackToChat}
-                className="p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all duration-200 backdrop-blur-sm shadow-sm hover:shadow-md"
+                className="p-2 rounded-lg glass-button glow-border"
                 aria-label="Back to chat"
               >
-                <ChevronLeftIcon className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                <ChevronLeftIcon className="w-5 h-5 text-accent" />
               </button>
             )}
             <div>
-              <h1 className="text-slate-800 dark:text-slate-100 text-3xl font-bold tracking-tight">
+              <h1 className="text-primary text-3xl font-bold tracking-tight text-gradient">
                 {isHistoryView ? "Conversation History" : "Claude Code Web UI"}
               </h1>
               {workingDirectory && (
-                <p className="text-slate-600 dark:text-slate-400 text-sm font-mono mt-1">
+                <p className="text-tertiary text-sm font-mono mt-1">
                   {workingDirectory}
                 </p>
               )}

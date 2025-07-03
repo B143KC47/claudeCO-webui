@@ -35,37 +35,37 @@ export function PermissionDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="glass-card glow-effect rounded-xl shadow-2xl max-w-md w-full mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-6 border-b border-accent">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
-              <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 bg-gradient-primary rounded-lg">
+              <ExclamationTriangleIcon className="w-5 h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+            <h2 className="text-lg font-semibold text-primary">
               Permission Required
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-1 glass-button rounded-lg smooth-transition"
             aria-label="Close dialog"
           >
-            <XMarkIcon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+            <XMarkIcon className="w-5 h-5 text-accent" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-slate-600 dark:text-slate-300 mb-4">
+          <p className="text-secondary mb-4">
             Claude wants to use the{" "}
-            <span className="font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-sm">
+            <span className="font-mono bg-black-quaternary text-accent px-2 py-1 rounded text-sm">
               {pattern}
             </span>{" "}
             tool.
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+          <p className="text-sm text-tertiary mb-6">
             Do you want to proceed?
           </p>
 
@@ -75,7 +75,7 @@ export function PermissionDialog({
               onClick={onAllow}
               className={getButtonClassName(
                 "allow",
-                "w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm hover:shadow-md",
+                "w-full px-4 py-3 bg-gradient-primary glow-effect hover:glow-border text-primary rounded-lg font-medium smooth-transition shadow-sm hover:shadow-md",
               )}
             >
               Yes
@@ -84,7 +84,7 @@ export function PermissionDialog({
               onClick={onAllowPermanent}
               className={getButtonClassName(
                 "allowPermanent",
-                "w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-sm hover:shadow-md",
+                "w-full px-4 py-3 bg-gradient-secondary glow-effect hover:glow-border text-primary rounded-lg font-medium smooth-transition shadow-sm hover:shadow-md",
               )}
             >
               Yes, and don't ask again for {toolName}
@@ -93,7 +93,7 @@ export function PermissionDialog({
               onClick={handleDeny}
               className={getButtonClassName(
                 "deny",
-                "w-full px-4 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg font-medium transition-colors",
+                "w-full px-4 py-3 glass-button hover:glow-effect text-secondary rounded-lg font-medium smooth-transition",
               )}
             >
               No

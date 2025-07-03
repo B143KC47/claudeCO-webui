@@ -80,15 +80,15 @@ export function ChatInput({
               : "Type your message... (Shift+Enter for new line)"
           }
           rows={1}
-          className={`w-full px-4 py-3 pr-32 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm shadow-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px]`}
+          className={`w-full px-4 py-3 pr-32 glass-input text-primary placeholder-text-tertiary resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px] smooth-transition rounded-2xl`}
           disabled={isLoading}
         />
-        <div className="absolute right-2 bottom-3 flex gap-2">
+        <div className="absolute right-3 bottom-3 flex gap-2">
           {isLoading && currentRequestId && (
             <button
               type="button"
               onClick={onAbort}
-              className="p-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+              className="p-2 glass-button text-accent glow-border smooth-transition rounded-xl"
               title="Stop (ESC)"
             >
               <StopIcon className="w-4 h-4" />
@@ -97,7 +97,7 @@ export function ChatInput({
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 text-sm"
+            className="px-4 py-2 bg-gradient-primary text-primary rounded-xl font-medium smooth-transition glow-effect disabled:cursor-not-allowed disabled:opacity-50 text-sm"
           >
             {isLoading ? "..." : "Send"}
           </button>
