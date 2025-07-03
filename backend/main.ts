@@ -13,11 +13,6 @@ import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
 import { handleMCP } from "./handlers/mcp.ts";
 import { handleBillingRequest } from "./handlers/billing.ts";
-import { 
-  handleGitHubAuthUrl, 
-  handleGitHubAuthCallback, 
-  handleSmitheryTokenVerify 
-} from "./handlers/auth.ts";
 
 const args = await parseCliArgs();
 
@@ -68,25 +63,6 @@ app.post(
   (c) => handleChatRequest(c, requestAbortControllers),
 );
 
-// Authentication API routes
-app.post("/api/auth/github/url", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleGitHubAuthUrl(ctx);
-  return response;
-});
-
-app.post("/api/auth/github/callback", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleGitHubAuthCallback(ctx);
-  return response;
-});
-
-app.post("/api/auth/smithery/verify", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleSmitheryTokenVerify(ctx);
-  return response;
-});
-
 // Settings API routes
 app.get("/api/mcp", async (c) => {
   const ctx = { request: c.req.raw };
@@ -94,31 +70,19 @@ app.get("/api/mcp", async (c) => {
   return response;
 });
 
-app.get("/api/mcp/smithery", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleMCP(ctx);
-  return response;
-});
-
-app.post("/api/mcp/install", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleMCP(ctx);
-  return response;
-});
-
-app.delete("/api/mcp/uninstall", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleMCP(ctx);
-  return response;
-});
-
-app.put("/api/mcp/update", async (c) => {
-  const ctx = { request: c.req.raw };
-  const response = await handleMCP(ctx);
-  return response;
-});
-
 app.get("/api/mcp/categories", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.put("/api/mcp/config", async (c) => {
+  const ctx = { request: c.req.raw };
+  const response = await handleMCP(ctx);
+  return response;
+});
+
+app.delete("/api/mcp/remove", async (c) => {
   const ctx = { request: c.req.raw };
   const response = await handleMCP(ctx);
   return response;

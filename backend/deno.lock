@@ -7,6 +7,10 @@
     "jsr:@cliffy/table@1.0.0-rc.7": "1.0.0-rc.7",
     "jsr:@hono/hono@4": "4.8.2",
     "jsr:@std/fmt@~1.0.2": "1.0.8",
+    "jsr:@std/fs@^1.0.7": "1.0.19",
+    "jsr:@std/internal@^1.0.9": "1.0.9",
+    "jsr:@std/path@^1.0.8": "1.1.1",
+    "jsr:@std/path@^1.1.1": "1.1.1",
     "jsr:@std/text@~1.0.7": "1.0.14",
     "npm:@anthropic-ai/claude-code@1.0.33": "1.0.33"
   },
@@ -41,6 +45,22 @@
     },
     "@std/fmt@1.0.8": {
       "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
+    },
+    "@std/fs@1.0.19": {
+      "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06",
+      "dependencies": [
+        "jsr:@std/internal",
+        "jsr:@std/path@^1.1.1"
+      ]
+    },
+    "@std/internal@1.0.9": {
+      "integrity": "bdfb97f83e4db7a13e8faab26fb1958d1b80cc64366501af78a0aee151696eb8"
+    },
+    "@std/path@1.1.1": {
+      "integrity": "fe00026bd3a7e6a27f73709b83c607798be40e20c81dde655ce34052fd82ec76",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
     },
     "@std/text@1.0.14": {
       "integrity": "1a810108482414d19112b8b506ad0b7cba826000cd13f74274ffda6dd83d273f"

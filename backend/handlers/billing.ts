@@ -38,17 +38,58 @@ interface BillingResponse {
  */
 export async function handleBillingRequest(c: Context) {
   try {
-    const homeDir = Deno.env.get("HOME");
+    const homeDir = Deno.env.get("HOME") || Deno.env.get("USERPROFILE");
     if (!homeDir) {
       return c.json({ error: "HOME environment variable not found" }, 500);
     }
 
-    const claudeConfigPath = `${homeDir}/.claude.json`;
+    // Try multiple possible config locations
+    const configPaths = [
+      `${homeDir}/.claude.json`,
+      `${homeDir}/.config/claude/claude.json`,
+      `${homeDir}/AppData/Roaming/Claude/claude.json`,
+      `${homeDir}/Library/Application Support/Claude/claude.json`
+    ];
+    
+    let claudeConfigPath: string | null = null;
+    let configContent: string | null = null;
+    
+    for (const path of configPaths) {
+      try {
+        configContent = await Deno.readTextFile(path);
+        claudeConfigPath = path;
+        break;
+      } catch {
+        // Continue to next path
+      }
+    }
+    
+    if (!configContent) {
+      // Return default values if no config found
+      return c.json({
+        usage: {
+          sessionCost: 0,
+          tokensUsed: 0,
+          requestsCount: 0,
+          sessionDuration: "0min",
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          linesAdded: 0,
+          linesRemoved: 0
+        },
+        billing: {
+          dailyAverage: 0,
+          monthlyEstimate: 0,
+          currentPeriodSpend: 0
+        },
+        lastUpdated: new Date().toISOString()
+      });
+    }
 
     try {
-      // Read Claude configuration file
-      const configContent = await Deno.readTextFile(claudeConfigPath);
-      const config = JSON.parse(configContent);
+      const config = JSON.parse(configContent!);
 
       // Get current working directory to find the right project
       const cwd = Deno.cwd();
@@ -98,12 +139,31 @@ export async function handleBillingRequest(c: Context) {
         linesRemoved: lastLinesRemoved
       };
 
-      // Calculate billing estimates
-      // Average cost per session from research: ~$6/day for developers
-      const dailyAverage = 6.0; // USD
-      const monthlyEstimate = dailyAverage * 30; // Roughly $180/month
-
-      // Current period spend (estimate based on last cost)
+      // Calculate billing estimates based on actual usage
+      // Get all project costs for daily average calculation
+      let totalDailyCost = 0;
+      let projectCount = 0;
+      
+      if (config.projects) {
+        const now = Date.now();
+        const dayMs = 24 * 60 * 60 * 1000;
+        
+        for (const projectData of Object.values(config.projects)) {
+          if (projectData && typeof projectData === 'object') {
+            const projectCost = (projectData as any).lastCost || 0;
+            const lastUpdated = (projectData as any).lastUpdated;
+            
+            if (lastUpdated && (now - new Date(lastUpdated).getTime()) < dayMs) {
+              totalDailyCost += projectCost;
+              projectCount++;
+            }
+          }
+        }
+      }
+      
+      // Calculate daily average from actual usage or use minimum estimate
+      const dailyAverage = projectCount > 0 ? totalDailyCost : (lastCost > 0 ? lastCost * 10 : 0);
+      const monthlyEstimate = dailyAverage * 30;
       const currentPeriodSpend = lastCost || 0;
 
       // Extract account information
@@ -129,29 +189,27 @@ export async function handleBillingRequest(c: Context) {
       return c.json(response);
 
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
-        return c.json({
-          usage: {
-            sessionCost: 0,
-            tokensUsed: 0,
-            requestsCount: 0,
-            sessionDuration: "0min",
-            inputTokens: 0,
-            outputTokens: 0,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            linesAdded: 0,
-            linesRemoved: 0
-          },
-          billing: {
-            dailyAverage: 6.0,
-            monthlyEstimate: 180.0,
-            currentPeriodSpend: 0
-          },
-          lastUpdated: new Date().toISOString()
-        });
-      }
-      throw error;
+      console.error("Error parsing config:", error);
+      return c.json({
+        usage: {
+          sessionCost: 0,
+          tokensUsed: 0,
+          requestsCount: 0,
+          sessionDuration: "0min",
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheCreationTokens: 0,
+          cacheReadTokens: 0,
+          linesAdded: 0,
+          linesRemoved: 0
+        },
+        billing: {
+          dailyAverage: 0,
+          monthlyEstimate: 0,
+          currentPeriodSpend: 0
+        },
+        lastUpdated: new Date().toISOString()
+      });
     }
   } catch (error) {
     console.error("Error reading billing data:", error);

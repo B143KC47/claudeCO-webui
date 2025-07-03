@@ -120,16 +120,16 @@ export function BillTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-primary mb-2">Usage & Billing</h2>
-          <p className="text-gray-400">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">Usage & Billing</h2>
+          <p className="text-sm sm:text-base text-gray-400">
             Monitor your Claude Code usage and costs
           </p>
         </div>
         <button
           onClick={handleRefresh}
-          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors w-full sm:w-auto"
         >
           Refresh
         </button>
@@ -142,22 +142,22 @@ export function BillTab() {
           <h3 className="text-lg font-semibold text-primary">Current Session</h3>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Session Cost</p>
-            <p className="text-xl font-bold text-orange-400">{formatCurrency(usage.sessionCost)}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Session Cost</p>
+            <p className="text-lg sm:text-xl font-bold text-orange-400">{formatCurrency(usage.sessionCost)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Duration</p>
-            <p className="text-xl font-bold text-primary">{usage.sessionDuration}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Duration</p>
+            <p className="text-lg sm:text-xl font-bold text-primary">{usage.sessionDuration}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Total Tokens</p>
-            <p className="text-xl font-bold text-primary">{formatNumber(usage.tokensUsed)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Total Tokens</p>
+            <p className="text-lg sm:text-xl font-bold text-primary">{formatNumber(usage.tokensUsed)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Requests</p>
-            <p className="text-xl font-bold text-primary">{usage.requestsCount}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Requests</p>
+            <p className="text-lg sm:text-xl font-bold text-primary">{usage.requestsCount}</p>
           </div>
         </div>
       </div>
@@ -169,22 +169,22 @@ export function BillTab() {
           <h3 className="text-lg font-semibold text-primary">Token Usage Breakdown</h3>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Input Tokens</p>
-            <p className="text-lg font-bold text-blue-400">{formatNumber(usage.inputTokens)}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Input Tokens</p>
+            <p className="text-base sm:text-lg font-bold text-blue-400">{formatNumber(usage.inputTokens)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Output Tokens</p>
-            <p className="text-lg font-bold text-green-400">{formatNumber(usage.outputTokens)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Output Tokens</p>
+            <p className="text-base sm:text-lg font-bold text-green-400">{formatNumber(usage.outputTokens)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Cache Creation</p>
-            <p className="text-lg font-bold text-purple-400">{formatNumber(usage.cacheCreationTokens)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Cache Creation</p>
+            <p className="text-base sm:text-lg font-bold text-purple-400">{formatNumber(usage.cacheCreationTokens)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Cache Read</p>
-            <p className="text-lg font-bold text-yellow-400">{formatNumber(usage.cacheReadTokens)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Cache Read</p>
+            <p className="text-base sm:text-lg font-bold text-yellow-400">{formatNumber(usage.cacheReadTokens)}</p>
           </div>
         </div>
       </div>
@@ -193,14 +193,14 @@ export function BillTab() {
       <div className="glass-card p-6">
         <h3 className="text-lg font-semibold text-primary mb-4">Code Changes</h3>
         
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Lines Added</p>
-            <p className="text-lg font-bold text-green-400">+{formatNumber(usage.linesAdded)}</p>
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Lines Added</p>
+            <p className="text-base sm:text-lg font-bold text-green-400">+{formatNumber(usage.linesAdded)}</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Lines Removed</p>
-            <p className="text-lg font-bold text-red-400">-{formatNumber(usage.linesRemoved)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Lines Removed</p>
+            <p className="text-base sm:text-lg font-bold text-red-400">-{formatNumber(usage.linesRemoved)}</p>
           </div>
         </div>
       </div>
@@ -212,20 +212,20 @@ export function BillTab() {
           <h3 className="text-lg font-semibold text-primary">Billing Overview</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Daily Average</p>
-            <p className="text-xl font-bold text-orange-400">{formatCurrency(billing.dailyAverage)}</p>
-            <p className="text-xs text-gray-500 mt-1">~$6/developer/day</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Daily Average</p>
+            <p className="text-lg sm:text-xl font-bold text-orange-400">{formatCurrency(billing.dailyAverage)}</p>
+            <p className="text-xs text-gray-500 mt-1">Based on usage</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Monthly Estimate</p>
-            <p className="text-xl font-bold text-orange-400">{formatCurrency(billing.monthlyEstimate)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Monthly Estimate</p>
+            <p className="text-lg sm:text-xl font-bold text-orange-400">{formatCurrency(billing.monthlyEstimate)}</p>
             <p className="text-xs text-gray-500 mt-1">Based on daily average</p>
           </div>
-          <div className="border border-gray-700/30 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Current Session</p>
-            <p className="text-xl font-bold text-primary">{formatCurrency(billing.currentPeriodSpend)}</p>
+          <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Current Session</p>
+            <p className="text-lg sm:text-xl font-bold text-primary">{formatCurrency(billing.currentPeriodSpend)}</p>
             <p className="text-xs text-gray-500 mt-1">This session</p>
           </div>
         </div>
