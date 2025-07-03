@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Format check
+        run: cd backend && deno fmt --check
+
+      - name: Lint
+        run: cd backend && deno lint
+
+      - name: Type check
+        run: cd backend && deno check main.ts
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Format check
+        run: cd frontend && npm run format:check
+
+      - name: Lint
+        run: cd frontend && npm run lint
+
+      - name: Type check
+        run: cd frontend && npm run typecheck
+
+      - name: Test
+        run: cd frontend && npm test
+
+      - name: Build
+        run: cd frontend && npm run build

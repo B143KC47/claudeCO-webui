@@ -1,0 +1,16 @@
+{
+  "tasks": {
+    "dev": "deno run --env-file --allow-net --allow-run --allow-read --allow-env --watch main.ts --debug",
+    "build": "deno compile --allow-net --allow-run --allow-read --allow-env --include ./VERSION --include ./dist --output ../dist/claude-code-webui main.ts",
+    "format": "deno fmt",
+    "lint": "deno lint",
+    "check": "deno check main.ts args.ts",
+    "test": "deno test --allow-env --allow-read"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1",
+    "@cliffy/command": "jsr:@cliffy/command@^1.0.0-rc.7", // TODO: Update to stable version when 1.0.0 is released
+    "hono": "jsr:@hono/hono@^4",
+    "@anthropic-ai/claude-code": "npm:@anthropic-ai/claude-code@1.0.33"
+  }
+}
