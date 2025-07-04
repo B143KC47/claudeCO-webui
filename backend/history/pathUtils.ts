@@ -104,3 +104,21 @@ export function convertWindowsPathToWSL(path: string): string {
   // Fallback: just replace backslashes with forward slashes
   return path.replace(/\\/g, "/");
 }
+
+/**
+ * Convert WSL path to Windows path format
+ * Examples:
+ * - /mnt/c/Users/username -> C:\Users\username
+ */
+export function convertWSLPathToWindows(path: string): string {
+  const mntMatch = path.match(/^\/mnt\/([a-z])\/(.*)/i);
+  if (mntMatch) {
+    const driveLetter = mntMatch[1].toUpperCase();
+    const restOfPath = mntMatch[2].replace(/\//g, "\\");
+    return `${driveLetter}:\\${restOfPath}`;
+  }
+
+  // If it's not a /mnt/ path, it's not a WSL path that can be directly
+  // converted to a drive letter path on Windows, so return it as-is.
+  return path;
+}

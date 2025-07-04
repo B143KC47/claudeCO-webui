@@ -1,5 +1,8 @@
 import { Context } from "hono";
-import { convertWindowsPathToWSL } from "../history/pathUtils.ts";
+import {
+  convertWindowsPathToWSL,
+  convertWSLPathToWindows,
+} from "../history/pathUtils.ts";
 
 interface TerminalRequest {
   command: string;
@@ -621,10 +624,13 @@ export async function handlePathValidation(c: Context) {
     const { path } = await c.req.json();
 
     if (!path || typeof path !== "string") {
-      return c.json({
-        isValid: false,
-        message: "Path is required",
-      }, 400);
+      return c.json(
+        {
+          isValid: false,
+          message: "Path is required",
+        },
+        400,
+      );
     }
 
     // Validate path format
@@ -644,34 +650,72 @@ export async function handlePathValidation(c: Context) {
 
     // Get system info to check if we're in WSL
     const systemInfo = await getSystemInfo();
-
-    // Convert path if needed
     let validationPath = path.trim();
 
-    console.log("[Path Validation] Received path:", path);
-    console.log("[Path Validation] System is WSL:", systemInfo.isWSL);
-
-    // If we're in WSL, convert Windows paths to WSL format
+    // If we're in a WSL-aware context, we prefer to work with WSL paths.
     if (systemInfo.isWSL) {
-      const originalPath = validationPath;
       validationPath = convertWindowsPathToWSL(path.trim());
-      if (originalPath !== validationPath) {
+    }
+
+    // If the host is Windows and we're validating a WSL path,
+    // shell out to WSL to perform the check, as Deno.stat on Windows
+    // can't see WSL-only directories.
+    if (Deno.build.os === "windows" && validationPath.startsWith("/mnt/")) {
+      try {
         console.log(
-          "[Path Validation] Converted Windows path to WSL:",
-          validationPath,
+          `[Path Validation] On Windows, using WSL to validate path: ${validationPath}`,
         );
+        const wslCheck = await new Deno.Command("wsl.exe", {
+          args: ["test", "-d", validationPath],
+          stdout: "piped",
+          stderr: "piped",
+        }).output();
+
+        if (wslCheck.code === 0) {
+          // Success! The directory exists in WSL.
+          return c.json({
+            isValid: true,
+            message: "Directory exists and is accessible within WSL.",
+            normalizedPath: validationPath,
+          });
+        } else {
+          // Directory not found according to WSL.
+          const errorOutput = new TextDecoder().decode(wslCheck.stderr);
+          return c.json({
+            isValid: false,
+            message:
+              `WSL validation failed: Directory not found at '${validationPath}'. Details: ${errorOutput}`,
+          });
+        }
+      } catch (wslError) {
+        // This could happen if wsl.exe is not in PATH
+        console.error(
+          "Error shelling out to WSL for path validation:",
+          wslError,
+        );
+        return c.json({
+          isValid: false,
+          message:
+            `Failed to execute WSL for validation. Make sure 'wsl.exe' is in your system's PATH. Error: ${
+              wslError instanceof Error ? wslError.message : String(wslError)
+            }`,
+        });
       }
     }
 
-    // Try to check if path exists and is a directory
+    // Fallback/standard validation for non-WSL paths or non-Windows hosts
     try {
-      const stat = await Deno.stat(validationPath);
+      const pathToStat = Deno.build.os === "windows"
+        ? convertWSLPathToWindows(validationPath)
+        : validationPath;
+
+      const stat = await Deno.stat(pathToStat);
 
       if (stat.isDirectory) {
         return c.json({
           isValid: true,
           message: "Directory exists and is accessible",
-          normalizedPath: validationPath, // Return the normalized path for frontend use
+          normalizedPath: validationPath,
         });
       } else {
         return c.json({
@@ -681,16 +725,9 @@ export async function handlePathValidation(c: Context) {
       }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
-        // For WSL, provide more helpful error message
-        let notFoundMessage = "Directory does not exist";
-        if (systemInfo.isWSL && path.match(/^[A-Za-z]:[\/\\]/)) {
-          notFoundMessage =
-            "Directory does not exist. Windows path was converted to: " +
-            validationPath;
-        }
         return c.json({
           isValid: false,
-          message: notFoundMessage,
+          message: `Directory not found at path: ${validationPath}`,
         });
       } else if (error instanceof Deno.errors.PermissionDenied) {
         return c.json({
