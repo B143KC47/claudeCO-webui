@@ -141,20 +141,31 @@ async function getSystemInfo(): Promise<SystemInfo> {
       }
     }
 
-    // Get current working directory
-    // Note: We use home directory instead of Deno.cwd() because Deno.cwd()
-    // returns the server process directory (claude-code-webui/backend),
-    // not the user's actual working directory
+    // Get current working directory - Deno.cwd() is the most reliable source
     try {
-      currentWorkingDirectory = Deno.env.get("HOME") ||
-        Deno.env.get("USERPROFILE") || "~";
-    } catch {
-      // Fallback to home directory
-      currentWorkingDirectory = "~";
+      currentWorkingDirectory = Deno.cwd();
+    } catch (e) {
+      console.error("Failed to get Deno.cwd(), falling back.", e);
+      // Fallback to home directory if cwd is not accessible
+      try {
+        currentWorkingDirectory = Deno.env.get("HOME") ||
+          Deno.env.get("USERPROFILE") || "~";
+      } catch {
+        currentWorkingDirectory = "~";
+      }
     }
 
-    // Get home directory
-    homeDirectory = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "~";
+    // Get home directory, prioritizing USERPROFILE in WSL for Windows home
+    try {
+      if (isWSL && Deno.env.get("USERPROFILE")) {
+        homeDirectory = Deno.env.get("USERPROFILE")!;
+      } else {
+        homeDirectory = Deno.env.get("HOME") ||
+          Deno.env.get("USERPROFILE") || "~";
+      }
+    } catch {
+      homeDirectory = "~";
+    }
 
     // Convert paths to WSL format if in WSL
     if (isWSL) {

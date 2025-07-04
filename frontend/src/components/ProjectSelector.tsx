@@ -18,6 +18,9 @@ export function ProjectSelector() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [showNewDirectoryInput, setShowNewDirectoryInput] = useState(false);
+  const [newDirectoryPath, setNewDirectoryPath] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Generate smart path suggestions based on system info and common patterns
@@ -28,42 +31,40 @@ export function ProjectSelector() {
       }
 
       const {
-        platform,
         username,
         homeDirectory,
         currentWorkingDirectory,
         isWSL,
       } = systemInfo;
 
-      // 优先使用当前工作目录，如果它看起来像一个合理的项目位置
+      let basePath = currentWorkingDirectory;
+
+      // In WSL, if the current directory is the WSL home (`/home/...`),
+      // but the detected home directory is a Windows path (`/mnt/c/Users/...`),
+      // prefer the Windows path for the suggestion.
       if (
-        currentWorkingDirectory &&
-        (currentWorkingDirectory.includes("Desktop") ||
-          currentWorkingDirectory.includes("Documents") ||
-          currentWorkingDirectory.includes("Projects") ||
-          currentWorkingDirectory.includes("dev") ||
-          currentWorkingDirectory.includes("workspace") ||
-          currentWorkingDirectory.includes("src"))
+        isWSL &&
+        currentWorkingDirectory.startsWith("/home/") &&
+        homeDirectory.startsWith("/mnt/")
       ) {
-        // 确保路径格式正确
-        const normalizedCwd = currentWorkingDirectory.replace(/\\/g, "/");
-        return `${normalizedCwd}/${directoryName}`;
+        basePath = homeDirectory;
       }
 
-      // WSL环境下优先使用Windows文件系统路径
-      if (platform === "windows" && isWSL) {
-        // WSL环境 - 优先使用/mnt/c/路径，因为用户通常使用Windows文件系统
-        return `/mnt/c/Users/${username}/Desktop/${directoryName}`;
-      } else if (platform === "windows" && !isWSL) {
-        // Native Windows environment
-        return `C:/Users/${username}/Desktop/${directoryName}`;
-      } else if (platform === "darwin") {
-        // macOS
-        return `/Users/${username}/Desktop/${directoryName}`;
-      } else {
-        // Linux
-        return `${homeDirectory}/Desktop/${directoryName}`;
+      // If the base path doesn't look like a typical development area,
+      // append "/Desktop" as a sensible default.
+      if (
+        !basePath.includes("Desktop") &&
+        !basePath.includes("Documents") &&
+        !basePath.includes("Projects") &&
+        !basePath.includes("dev") &&
+        !basePath.includes("workspace") &&
+        !basePath.includes("src")
+      ) {
+        basePath = `${basePath}/Desktop`;
       }
+
+      const normalizedBasePath = basePath.replace(/\\/g, "/");
+      return `${normalizedBasePath}/${directoryName}`;
     },
     [systemInfo],
   );
@@ -116,68 +117,67 @@ export function ProjectSelector() {
 
     try {
       const dirHandle = await window.showDirectoryPicker();
-
-      // Log the selected directory name for debugging
       console.log(
         "[Directory Picker] Selected directory name:",
         dirHandle.name,
       );
-      console.log("[Directory Picker] Directory handle:", dirHandle);
 
-      // Generate smart path suggestion based on system info
       const smartPath = generateSmartPath(dirHandle.name);
       console.log("[Directory Picker] Generated smart path:", smartPath);
 
-      // Validate the path and get the normalized WSL path if needed
-      try {
-        console.log("[Directory Picker] Validating path:", smartPath);
-        const response = await fetch("/api/terminal/validate-path", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ path: smartPath }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log("[Directory Picker] Validation result:", result);
-
-          // Use normalized path if available (for WSL conversion), otherwise use smart path
-          const pathToUse = result.normalizedPath || smartPath;
-          console.log("[Directory Picker] Final path to use:", pathToUse);
-
-          // Navigate directly to the project with the correct path
-          const normalizedPath = pathToUse.startsWith("/")
-            ? pathToUse
-            : `/${pathToUse}`;
-          console.log(
-            "[Directory Picker] Navigating to:",
-            `/projects${normalizedPath}`,
-          );
-          navigate(`/projects${normalizedPath}`);
-        } else {
-          // If validation fails, still navigate with the smart path
-          console.warn(
-            "[Directory Picker] Path validation failed, using smart path",
-          );
-          const normalizedPath = smartPath.startsWith("/")
-            ? smartPath
-            : `/${smartPath}`;
-          navigate(`/projects${normalizedPath}`);
-        }
-      } catch (error) {
-        console.error("[Directory Picker] Error validating path:", error);
-        // On error, still navigate with the smart path
-        const normalizedPath = smartPath.startsWith("/")
-          ? smartPath
-          : `/${smartPath}`;
-        navigate(`/projects${normalizedPath}`);
-      }
+      setNewDirectoryPath(smartPath);
+      setShowNewDirectoryInput(true);
+      setValidationError(null);
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         console.error("Failed to select directory:", err);
       }
+    }
+  };
+
+  const handleNewDirectorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDirectoryPath) {
+      setValidationError("Path cannot be empty.");
+      return;
+    }
+
+    setValidationError(null);
+    setLoading(true);
+
+    try {
+      console.log("[Directory Input] Validating path:", newDirectoryPath);
+      const response = await fetch("/api/terminal/validate-path", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path: newDirectoryPath }),
+      });
+
+      const result = await response.json();
+      console.log("[Directory Input] Validation result:", result);
+
+      if (response.ok && result.isValid) {
+        const pathToUse = result.normalizedPath || newDirectoryPath;
+        const normalizedPath = pathToUse.startsWith("/")
+          ? pathToUse
+          : `/${pathToUse}`;
+        console.log(
+          "[Directory Input] Navigating to:",
+          `/projects${normalizedPath}`,
+        );
+        navigate(`/projects${normalizedPath}`);
+      } else {
+        setValidationError(
+          result.message || "Invalid or inaccessible directory.",
+        );
+      }
+    } catch (error) {
+      console.error("[Directory Input] Error validating path:", error);
+      setValidationError("An error occurred during path validation.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -248,6 +248,37 @@ export function ProjectSelector() {
               Select New Directory
             </span>
           </button>
+
+          {showNewDirectoryInput && (
+            <form
+              onSubmit={handleNewDirectorySubmit}
+              className="p-4 glass-card space-y-3"
+            >
+              <label className="text-secondary text-sm">
+                Confirm or correct the suggested path:
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={newDirectoryPath}
+                  onChange={(e) => setNewDirectoryPath(e.target.value)}
+                  placeholder="Enter full directory path (e.g., C:\Users\user\project or /home/user/project)"
+                  className="flex-grow glass-input px-3 py-2 rounded-lg text-primary bg-black-secondary border-accent focus:ring-accent focus:border-accent"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 glass-button rounded-lg bg-accent text-primary font-semibold disabled:opacity-50"
+                >
+                  {loading ? "Validating..." : "Go"}
+                </button>
+              </div>
+              {validationError && (
+                <p className="text-accent text-sm">{validationError}</p>
+              )}
+            </form>
+          )}
         </div>
       </div>
     </div>
