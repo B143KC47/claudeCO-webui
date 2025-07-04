@@ -21,7 +21,7 @@ export function ThinkingModeSelector({
   const getCompactTokenDisplay = (mode: ThinkingMode) => {
     const config = THINKING_MODE_CONFIGS[mode];
     if (config.budgetTokens === 0) return "";
-    
+
     // Use compact notation: 4K, 10K, 32K
     const tokens = config.budgetTokens;
     if (tokens >= 1000) {
@@ -40,7 +40,10 @@ export function ThinkingModeSelector({
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="thinking-mode" className="text-xs text-secondary whitespace-nowrap hidden sm:block">
+      <label
+        htmlFor="thinking-mode"
+        className="text-xs text-secondary whitespace-nowrap hidden sm:block"
+      >
         Mode:
       </label>
       <div className="relative flex-1 min-w-0">
@@ -61,13 +64,20 @@ export function ThinkingModeSelector({
           `}
           title={getStatusText(value)}
         >
-          {(Object.keys(THINKING_MODE_CONFIGS) as ThinkingMode[]).map((mode) => (
-            <option key={mode} value={mode} className="bg-black-secondary text-primary">
-              {THINKING_MODE_LABELS[mode]}{getCompactTokenDisplay(mode)}
-            </option>
-          ))}
+          {(Object.keys(THINKING_MODE_CONFIGS) as ThinkingMode[]).map(
+            (mode) => (
+              <option
+                key={mode}
+                value={mode}
+                className="bg-black-secondary text-primary"
+              >
+                {THINKING_MODE_LABELS[mode]}
+                {getCompactTokenDisplay(mode)}
+              </option>
+            ),
+          )}
         </select>
-        <ChevronDownIcon 
+        <ChevronDownIcon
           className={`
             absolute right-1.5 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4
             text-accent pointer-events-none smooth-transition
@@ -75,7 +85,7 @@ export function ThinkingModeSelector({
           `}
         />
       </div>
-      
+
       {/* Status indicator - only show on larger screens */}
       <div className="hidden lg:block flex-shrink-0">
         <span className="text-xs text-tertiary">
@@ -88,4 +98,4 @@ export function ThinkingModeSelector({
       </div>
     </div>
   );
-} 
+}

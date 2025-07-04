@@ -1,6 +1,71 @@
 import { Context } from "hono";
 import type { ProjectInfo, ProjectsResponse } from "../../shared/types.ts";
-import { getEncodedProjectName } from "../history/pathUtils.ts";
+import {
+  convertWindowsPathToWSL,
+  getEncodedProjectName,
+} from "../history/pathUtils.ts";
+
+/**
+ * Check if running in WSL environment
+ */
+async function isWSL(): Promise<boolean> {
+  const platform = Deno.build.os;
+  if (platform !== "linux") return false;
+
+  try {
+    const wslCheck = await new Deno.Command("uname", {
+      args: ["-r"],
+      stdout: "piped",
+      stderr: "piped",
+    }).output();
+
+    if (wslCheck.success) {
+      const kernelInfo = new TextDecoder().decode(wslCheck.stdout)
+        .toLowerCase();
+      return kernelInfo.includes("microsoft") || kernelInfo.includes("wsl");
+    }
+  } catch {
+    // If uname fails, check for WSL environment variables
+    return Boolean(Deno.env.get("WSL_DISTRO_NAME")) ||
+      Boolean(Deno.env.get("WSLENV"));
+  }
+
+  return false;
+}
+
+/**
+ * Resolve the actual path for a project, handling WSL path conversion
+ */
+async function resolveProjectPath(
+  path: string,
+  isInWSL: boolean,
+): Promise<string> {
+  // If not in WSL, return as-is
+  if (!isInWSL) {
+    return path;
+  }
+
+  // Convert Windows paths to WSL format
+  const convertedPath = convertWindowsPathToWSL(path);
+
+  // Check if the converted path exists
+  try {
+    await Deno.stat(convertedPath);
+    console.log(
+      `[Projects] Converted Windows path to WSL: ${path} -> ${convertedPath}`,
+    );
+    return convertedPath;
+  } catch {
+    // If converted path doesn't exist, try the original
+    try {
+      await Deno.stat(path);
+      return path;
+    } catch {
+      // Neither exists, return the converted path for better UX in WSL
+      return convertedPath;
+    }
+  }
+}
 
 /**
  * Handles GET /api/projects requests
@@ -16,6 +81,7 @@ export async function handleProjectsRequest(c: Context) {
     }
 
     const claudeConfigPath = `${homeDir}/.claude.json`;
+    const inWSL = await isWSL();
 
     try {
       const configContent = await Deno.readTextFile(claudeConfigPath);
@@ -27,11 +93,14 @@ export async function handleProjectsRequest(c: Context) {
         // Get encoded names for each project, only include projects with history
         const projects: ProjectInfo[] = [];
         for (const path of projectPaths) {
+          // Resolve the actual path (especially important for WSL)
+          const resolvedPath = await resolveProjectPath(path, inWSL);
+
           const encodedName = await getEncodedProjectName(path);
           // Only include projects that have history directories
           if (encodedName) {
             projects.push({
-              path,
+              path: resolvedPath, // Use the resolved path
               encodedName,
             });
           }

@@ -87,9 +87,7 @@ export function HistoryView({ encodedName }: HistoryViewProps) {
           <h2 className="text-primary text-xl font-semibold mb-2">
             Error Loading History
           </h2>
-          <p className="text-secondary text-sm mb-4">
-            {error}
-          </p>
+          <p className="text-secondary text-sm mb-4">{error}</p>
         </div>
       </div>
     );

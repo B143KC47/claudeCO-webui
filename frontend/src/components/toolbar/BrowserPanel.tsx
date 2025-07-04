@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
-import { 
-  ArrowLeftIcon, 
-  ArrowRightIcon, 
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
   ArrowPathIcon,
   HomeIcon,
-  MagnifyingGlassIcon 
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 
 export function BrowserPanel() {
@@ -18,7 +18,7 @@ export function BrowserPanel() {
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let newUrl = inputUrl.trim();
-    
+
     // Add protocol if missing
     if (newUrl && !newUrl.match(/^https?:\/\//)) {
       // Check if it looks like a search query
@@ -28,17 +28,17 @@ export function BrowserPanel() {
         newUrl = `https://${newUrl}`;
       }
     }
-    
+
     if (newUrl) {
       setUrl(newUrl);
       setInputUrl(newUrl);
-      
+
       // Update history
       const newHistory = history.slice(0, historyIndex + 1);
       newHistory.push(newUrl);
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
-      
+
       setIsLoading(true);
     }
   };
@@ -100,7 +100,7 @@ export function BrowserPanel() {
         >
           <ArrowLeftIcon className="w-4 h-4 text-accent" />
         </button>
-        
+
         <button
           onClick={handleForward}
           disabled={historyIndex >= history.length - 1}
@@ -109,15 +109,17 @@ export function BrowserPanel() {
         >
           <ArrowRightIcon className="w-4 h-4 text-accent" />
         </button>
-        
+
         <button
           onClick={handleRefresh}
           className="p-2 glass-button glow-border smooth-transition rounded-lg"
           aria-label="Refresh"
         >
-          <ArrowPathIcon className={`w-4 h-4 text-accent ${isLoading ? "animate-spin" : ""}`} />
+          <ArrowPathIcon
+            className={`w-4 h-4 text-accent ${isLoading ? "animate-spin" : ""}`}
+          />
         </button>
-        
+
         <button
           onClick={handleHome}
           className="p-2 glass-button glow-border smooth-transition rounded-lg"
@@ -128,7 +130,10 @@ export function BrowserPanel() {
       </div>
 
       {/* Address Bar */}
-      <form onSubmit={handleUrlSubmit} className="flex items-center gap-2 flex-shrink-0">
+      <form
+        onSubmit={handleUrlSubmit}
+        className="flex items-center gap-2 flex-shrink-0"
+      >
         <div className="flex-1 relative">
           <input
             type="text"
@@ -158,7 +163,7 @@ export function BrowserPanel() {
               </div>
             </div>
           )}
-          
+
           <iframe
             ref={iframeRef}
             src={url}
@@ -169,16 +174,18 @@ export function BrowserPanel() {
             title="Browser content"
           />
         </div>
-        
+
         {/* Status Bar */}
         <div className="absolute bottom-2 left-2 right-2 text-xs text-tertiary flex items-center justify-between bg-black-primary/80 backdrop-blur-sm rounded px-2 py-1">
           <span className="truncate flex-1 mr-2">Loaded: {url}</span>
           <span className="flex items-center gap-1 flex-shrink-0">
-            <div className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500" : "bg-green-500"}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${isLoading ? "bg-yellow-500" : "bg-green-500"}`}
+            />
             {isLoading ? "Loading" : "Ready"}
           </span>
         </div>
       </div>
     </div>
   );
-} 
+}

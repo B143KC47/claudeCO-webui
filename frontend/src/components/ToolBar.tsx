@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { 
-  ComputerDesktopIcon, 
-  CommandLineIcon, 
+import {
+  ComputerDesktopIcon,
+  CommandLineIcon,
   FolderIcon,
-  XMarkIcon 
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { BrowserPanel } from "./toolbar/BrowserPanel";
 import { TerminalPanel } from "./toolbar/TerminalPanel";
@@ -28,7 +28,7 @@ export function ToolBar({ workingDirectory }: ToolBarProps) {
     },
     {
       id: "terminal" as const,
-      label: "Terminal", 
+      label: "Terminal",
       icon: CommandLineIcon,
     },
     {
@@ -72,16 +72,17 @@ export function ToolBar({ workingDirectory }: ToolBarProps) {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
                   flex items-center gap-2 px-3 py-2 rounded-lg smooth-transition text-sm font-medium
-                  ${isActive 
-                    ? "bg-gradient-primary text-primary glow-effect" 
-                    : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                  ${
+                    isActive
+                      ? "bg-gradient-primary text-primary glow-effect"
+                      : "text-secondary hover:text-primary hover:bg-black-secondary/50"
                   }
                 `}
               >
@@ -91,7 +92,7 @@ export function ToolBar({ workingDirectory }: ToolBarProps) {
             );
           })}
         </div>
-        
+
         <button
           onClick={() => setIsCollapsed(true)}
           className="p-2 text-tertiary hover:text-primary smooth-transition rounded-lg hover:bg-black-secondary/50"
@@ -102,9 +103,7 @@ export function ToolBar({ workingDirectory }: ToolBarProps) {
       </div>
 
       {/* Panel Content */}
-      <div className="p-4">
-        {renderActivePanel()}
-      </div>
+      <div className="p-4">{renderActivePanel()}</div>
     </div>
   );
-} 
+}

@@ -5,39 +5,43 @@
 /* 纯黑+橙红主题配色系统 */
 :root {
   /* 主色调 - 纯黑色系 */
-  --bg-primary: #000000;          /* 纯黑色主背景 */
-  --bg-secondary: #0a0a0a;        /* 深黑色次要背景 */
-  --bg-tertiary: #111111;         /* 稍浅的黑色 */
-  --bg-quaternary: #1a1a1a;       /* 组件背景 */
-  
+  --bg-primary: #000000; /* 纯黑色主背景 */
+  --bg-secondary: #0a0a0a; /* 深黑色次要背景 */
+  --bg-tertiary: #111111; /* 稍浅的黑色 */
+  --bg-quaternary: #1a1a1a; /* 组件背景 */
+
   /* 橙红色系 - 强调色 */
-  --accent-primary: #ff6b35;      /* 明亮橙色 - 主强调 */
-  --accent-secondary: #ff4757;    /* 橙红色 - 次要强调 */
-  --accent-tertiary: #c44569;     /* 深橙红 - 深色强调 */
-  --accent-hover: #ff8f65;        /* 悬浮状态 */
-  
+  --accent-primary: #ff6b35; /* 明亮橙色 - 主强调 */
+  --accent-secondary: #ff4757; /* 橙红色 - 次要强调 */
+  --accent-tertiary: #c44569; /* 深橙红 - 深色强调 */
+  --accent-hover: #ff8f65; /* 悬浮状态 */
+
   /* 文本颜色 */
-  --text-primary: #ffffff;        /* 主要文本 */
-  --text-secondary: #e0e0e0;      /* 次要文本 */
-  --text-tertiary: #a0a0a0;       /* 三级文本 */
-  --text-disabled: #666666;       /* 禁用文本 */
-  
+  --text-primary: #ffffff; /* 主要文本 */
+  --text-secondary: #e0e0e0; /* 次要文本 */
+  --text-tertiary: #a0a0a0; /* 三级文本 */
+  --text-disabled: #666666; /* 禁用文本 */
+
   /* 边框和分隔线 */
-  --border-primary: #333333;      /* 主要边框 */
-  --border-secondary: #222222;    /* 次要边框 */
-  --border-accent: #ff6b35;       /* 强调边框 */
-  
+  --border-primary: #333333; /* 主要边框 */
+  --border-secondary: #222222; /* 次要边框 */
+  --border-accent: #ff6b35; /* 强调边框 */
+
   /* 渐变色 */
   --gradient-primary: linear-gradient(135deg, #ff6b35 0%, #ff4757 100%);
   --gradient-secondary: linear-gradient(135deg, #ff4757 0%, #c44569 100%);
   --gradient-subtle: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-  --gradient-glass: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 71, 87, 0.1) 100%);
-  
+  --gradient-glass: linear-gradient(
+    135deg,
+    rgba(255, 107, 53, 0.1) 0%,
+    rgba(255, 71, 87, 0.1) 100%
+  );
+
   /* 玻璃态效果变量 */
   --glass-bg: rgba(26, 26, 26, 0.8);
   --glass-border: rgba(255, 107, 53, 0.2);
   --glass-backdrop: blur(12px);
-  
+
   /* 阴影 */
   --shadow-primary: 0 4px 20px rgba(255, 107, 53, 0.3);
   --shadow-secondary: 0 2px 10px rgba(255, 107, 53, 0.2);
@@ -47,25 +51,25 @@
 /* 亮色主题变量 */
 :root:not(.dark) {
   /* 亮色主题背景 */
-  --bg-primary: #ffffff;          /* 白色主背景 */
-  --bg-secondary: #f8f9fa;        /* 浅灰色次要背景 */
-  --bg-tertiary: #f1f3f4;         /* 稍深的灰色 */
-  --bg-quaternary: #e8eaed;       /* 组件背景 */
-  
+  --bg-primary: #ffffff; /* 白色主背景 */
+  --bg-secondary: #f8f9fa; /* 浅灰色次要背景 */
+  --bg-tertiary: #f1f3f4; /* 稍深的灰色 */
+  --bg-quaternary: #e8eaed; /* 组件背景 */
+
   /* 亮色主题文本 */
-  --text-primary: #1a1a1a;        /* 深色主要文本 */
-  --text-secondary: #4a4a4a;      /* 深灰色次要文本 */
-  --text-tertiary: #6a6a6a;       /* 中灰色三级文本 */
-  --text-disabled: #9a9a9a;       /* 浅灰色禁用文本 */
-  
+  --text-primary: #1a1a1a; /* 深色主要文本 */
+  --text-secondary: #4a4a4a; /* 深灰色次要文本 */
+  --text-tertiary: #6a6a6a; /* 中灰色三级文本 */
+  --text-disabled: #9a9a9a; /* 浅灰色禁用文本 */
+
   /* 亮色主题边框 */
-  --border-primary: #d1d5db;      /* 浅灰色主要边框 */
-  --border-secondary: #e5e7eb;    /* 更浅的次要边框 */
-  
+  --border-primary: #d1d5db; /* 浅灰色主要边框 */
+  --border-secondary: #e5e7eb; /* 更浅的次要边框 */
+
   /* 亮色主题玻璃态效果 */
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(255, 107, 53, 0.3);
-  
+
   /* 亮色主题阴影 */
   --shadow-primary: 0 4px 20px rgba(255, 107, 53, 0.2);
   --shadow-secondary: 0 2px 10px rgba(255, 107, 53, 0.15);
@@ -73,7 +77,8 @@
 }
 
 /* 全屏布局基础设置 */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -119,21 +124,21 @@ html, body {
   .mobile-padding {
     padding: 0.75rem;
   }
-  
+
   .mobile-text-sm {
     font-size: 0.875rem;
   }
-  
+
   .mobile-spacing {
     gap: 0.5rem;
   }
-  
+
   /* 移动端按钮优化 */
   .mobile-button {
     min-height: 44px; /* 苹果推荐的最小触控目标 */
     padding: 0.75rem 1rem;
   }
-  
+
   /* 移动端输入框优化 */
   .mobile-input {
     font-size: 16px; /* 防止iOS缩放 */
@@ -146,7 +151,7 @@ html, body {
   .mobile-padding {
     padding: 0.5rem;
   }
-  
+
   .mobile-text-xs {
     font-size: 0.75rem;
   }
@@ -282,7 +287,8 @@ html, body {
 
 /* 脉冲动画 */
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 5px rgba(255, 107, 53, 0.5);
   }
   50% {
@@ -308,7 +314,7 @@ html, body {
 }
 
 .glow-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -2px;
   background: var(--gradient-primary);

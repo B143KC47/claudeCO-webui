@@ -1,4 +1,5 @@
 import { Context } from "hono";
+import { convertWindowsPathToWSL } from "../history/pathUtils.ts";
 
 interface TerminalRequest {
   command: string;
@@ -43,23 +44,26 @@ async function getSystemInfo(): Promise<SystemInfo> {
           stdout: "piped",
           stderr: "piped",
         }).output();
-        
+
         if (wslCheck.success) {
-          const kernelInfo = new TextDecoder().decode(wslCheck.stdout).toLowerCase();
-          isWSL = kernelInfo.includes("microsoft") || kernelInfo.includes("wsl");
+          const kernelInfo = new TextDecoder().decode(wslCheck.stdout)
+            .toLowerCase();
+          isWSL = kernelInfo.includes("microsoft") ||
+            kernelInfo.includes("wsl");
         }
       } catch {
         // If uname fails, check for WSL environment variables
-        isWSL = Boolean(Deno.env.get("WSL_DISTRO_NAME")) || Boolean(Deno.env.get("WSLENV"));
+        isWSL = Boolean(Deno.env.get("WSL_DISTRO_NAME")) ||
+          Boolean(Deno.env.get("WSLENV"));
       }
     }
 
     // Get username with multiple fallbacks
     // Priority order: environment variables, whoami command
-    username = Deno.env.get("USER") || 
-               Deno.env.get("USERNAME") || 
-               Deno.env.get("LOGNAME") || 
-               "user";
+    username = Deno.env.get("USER") ||
+      Deno.env.get("USERNAME") ||
+      Deno.env.get("LOGNAME") ||
+      "user";
 
     // Try whoami as fallback if env vars don't work
     try {
@@ -67,7 +71,7 @@ async function getSystemInfo(): Promise<SystemInfo> {
         stdout: "piped",
         stderr: "piped",
       }).output();
-      
+
       if (userResult.success) {
         const whoamiUser = new TextDecoder().decode(userResult.stdout).trim();
         if (whoamiUser && whoamiUser !== "root" && whoamiUser.length > 0) {
@@ -79,9 +83,9 @@ async function getSystemInfo(): Promise<SystemInfo> {
     }
 
     // Get hostname with multiple fallbacks
-    hostname = Deno.env.get("HOSTNAME") || 
-               Deno.env.get("COMPUTERNAME") || 
-               "claude";
+    hostname = Deno.env.get("HOSTNAME") ||
+      Deno.env.get("COMPUTERNAME") ||
+      "claude";
 
     // Try hostname command as fallback
     try {
@@ -89,9 +93,10 @@ async function getSystemInfo(): Promise<SystemInfo> {
         stdout: "piped",
         stderr: "piped",
       }).output();
-      
+
       if (hostnameResult.success) {
-        const hostnameValue = new TextDecoder().decode(hostnameResult.stdout).trim();
+        const hostnameValue = new TextDecoder().decode(hostnameResult.stdout)
+          .trim();
         if (hostnameValue && hostnameValue.length > 0) {
           hostname = hostnameValue;
         }
@@ -105,10 +110,10 @@ async function getSystemInfo(): Promise<SystemInfo> {
       // In WSL, prioritize Linux environment user info, not Windows
       // Only get Windows hostname if Linux hostname is not available
       const wslHostname = Deno.env.get("COMPUTERNAME");
-      
+
       // For WSL, we want to keep the Linux username, not get Windows username
       // The username should already be correctly set from environment variables or whoami command above
-      
+
       // Only update hostname if we don't have a good one from Linux environment
       if (!hostname || hostname === "claude") {
         if (wslHostname) {
@@ -121,9 +126,10 @@ async function getSystemInfo(): Promise<SystemInfo> {
               stdout: "piped",
               stderr: "piped",
             }).output();
-            
+
             if (psHostResult.success) {
-              const psHostname = new TextDecoder().decode(psHostResult.stdout).trim();
+              const psHostname = new TextDecoder().decode(psHostResult.stdout)
+                .trim();
               if (psHostname && psHostname.length > 0) {
                 hostname = psHostname;
               }
@@ -136,11 +142,12 @@ async function getSystemInfo(): Promise<SystemInfo> {
     }
 
     // Get current working directory
-    // Note: We use home directory instead of Deno.cwd() because Deno.cwd() 
+    // Note: We use home directory instead of Deno.cwd() because Deno.cwd()
     // returns the server process directory (claude-code-webui/backend),
     // not the user's actual working directory
     try {
-      currentWorkingDirectory = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "~";
+      currentWorkingDirectory = Deno.env.get("HOME") ||
+        Deno.env.get("USERPROFILE") || "~";
     } catch {
       // Fallback to home directory
       currentWorkingDirectory = "~";
@@ -149,6 +156,29 @@ async function getSystemInfo(): Promise<SystemInfo> {
     // Get home directory
     homeDirectory = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "~";
 
+    // Convert paths to WSL format if in WSL
+    if (isWSL) {
+      const originalCwd = currentWorkingDirectory;
+      const originalHome = homeDirectory;
+
+      currentWorkingDirectory = convertWindowsPathToWSL(
+        currentWorkingDirectory,
+      );
+      homeDirectory = convertWindowsPathToWSL(homeDirectory);
+
+      // Log conversions if paths changed
+      if (originalCwd !== currentWorkingDirectory) {
+        console.log("[Terminal Info] Converted current working directory:");
+        console.log("  Original:", originalCwd);
+        console.log("  WSL Path:", currentWorkingDirectory);
+      }
+
+      if (originalHome !== homeDirectory) {
+        console.log("[Terminal Info] Converted home directory:");
+        console.log("  Original:", originalHome);
+        console.log("  WSL Path:", homeDirectory);
+      }
+    }
   } catch (error) {
     console.error("Error getting system info:", error);
   }
@@ -167,12 +197,19 @@ async function getSystemInfo(): Promise<SystemInfo> {
  * Translate Windows/macOS paths to WSL paths
  */
 function translateToWSLPath(path: string): string {
-  // Handle Windows drive paths (C:\... or C:/)
-  const windowsDriveMatch = path.match(/^([A-Za-z]):[\\\/]/);
-  if (windowsDriveMatch) {
-    const drive = windowsDriveMatch[1].toLowerCase();
-    const restOfPath = path.substring(3).replace(/\\/g, "/");
-    return `/mnt/${drive}/${restOfPath}`;
+  // Use the centralized path conversion function
+  const convertedPath = convertWindowsPathToWSL(path);
+
+  // Handle special cases for home directory shortcuts
+  if (path === "~" || path === "~/") {
+    return Deno.env.get("HOME") || "/home/" + (Deno.env.get("USER") || "user");
+  }
+
+  // If it starts with ~/, expand it
+  if (path.startsWith("~/")) {
+    const home = Deno.env.get("HOME") ||
+      "/home/" + (Deno.env.get("USER") || "user");
+    return home + path.substring(1);
   }
 
   // Handle macOS-style paths (/Users/...)
@@ -185,19 +222,7 @@ function translateToWSLPath(path: string): string {
     }
   }
 
-  // Handle current directory shortcuts
-  if (path === "~" || path === "~/") {
-    return Deno.env.get("HOME") || "/home/" + (Deno.env.get("USER") || "user");
-  }
-
-  // If it starts with ~/, expand it
-  if (path.startsWith("~/")) {
-    const home = Deno.env.get("HOME") || "/home/" + (Deno.env.get("USER") || "user");
-    return home + path.substring(1);
-  }
-
-  // Return as-is if it's already a Unix-style path
-  return path;
+  return convertedPath;
 }
 
 /**
@@ -229,7 +254,7 @@ async function validateWorkingDirectory(
     const fallbacks = [
       Deno.env.get("HOME") || "/home/" + (Deno.env.get("USER") || "user"),
       "/tmp",
-      "/"
+      "/",
     ];
 
     for (const fallback of fallbacks) {
@@ -263,8 +288,11 @@ export async function handleTerminalInfo(c: Context) {
   } catch (error) {
     console.error("Error getting terminal info:", error);
     return c.json(
-      { error: "Failed to get terminal info", details: error instanceof Error ? error.message : String(error) },
-      500
+      {
+        error: "Failed to get terminal info",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
     );
   }
 }
@@ -290,7 +318,8 @@ export async function handleTerminalExecute(
     );
   }
 
-  const { command, workingDirectory, requestId, shell = "bash" } = terminalRequest;
+  const { command, workingDirectory, requestId, shell = "bash" } =
+    terminalRequest;
 
   if (!command || !requestId) {
     return c.json({ error: "Command and requestId are required" }, 400);
@@ -311,7 +340,7 @@ export async function handleTerminalExecute(
         // Send start signal
         const startResponse: TerminalStreamResponse = { type: "start" };
         controller.enqueue(
-          new TextEncoder().encode(JSON.stringify(startResponse) + "\n")
+          new TextEncoder().encode(JSON.stringify(startResponse) + "\n"),
         );
 
         // Determine the shell command to use
@@ -335,16 +364,34 @@ export async function handleTerminalExecute(
         // Validate and normalize working directory
         let normalizedWorkingDirectory: string | undefined;
         if (workingDirectory) {
+          console.log(
+            "[Terminal Execute] Original working directory:",
+            workingDirectory,
+          );
           normalizedWorkingDirectory = await validateWorkingDirectory(
             workingDirectory,
-            systemInfo.isWSL
+            systemInfo.isWSL,
           );
+          if (normalizedWorkingDirectory !== workingDirectory) {
+            console.log(
+              "[Terminal Execute] Normalized working directory:",
+              normalizedWorkingDirectory,
+            );
+          }
         }
 
         if (debugMode) {
           console.debug(`[DEBUG] Executing command: ${shellCmd.join(" ")}`);
-          console.debug(`[DEBUG] Original working directory: ${workingDirectory || "current"}`);
-          console.debug(`[DEBUG] Normalized working directory: ${normalizedWorkingDirectory || "current"}`);
+          console.debug(
+            `[DEBUG] Original working directory: ${
+              workingDirectory || "current"
+            }`,
+          );
+          console.debug(
+            `[DEBUG] Normalized working directory: ${
+              normalizedWorkingDirectory || "current"
+            }`,
+          );
           console.debug(`[DEBUG] Is WSL: ${systemInfo.isWSL}`);
         }
 
@@ -384,7 +431,7 @@ export async function handleTerminalExecute(
                 };
 
                 controller.enqueue(
-                  new TextEncoder().encode(JSON.stringify(response) + "\n")
+                  new TextEncoder().encode(JSON.stringify(response) + "\n"),
                 );
 
                 if (debugMode) {
@@ -400,7 +447,7 @@ export async function handleTerminalExecute(
           readStdout();
         }
 
-        // Handle stderr stream  
+        // Handle stderr stream
         if (child.stderr) {
           const stderrReader = child.stderr.getReader();
           const decoder = new TextDecoder();
@@ -419,7 +466,7 @@ export async function handleTerminalExecute(
                 };
 
                 controller.enqueue(
-                  new TextEncoder().encode(JSON.stringify(response) + "\n")
+                  new TextEncoder().encode(JSON.stringify(response) + "\n"),
                 );
 
                 if (debugMode) {
@@ -439,7 +486,9 @@ export async function handleTerminalExecute(
         const status = await child.status;
 
         if (debugMode) {
-          console.debug(`[DEBUG] Command completed with exit code: ${status.code}`);
+          console.debug(
+            `[DEBUG] Command completed with exit code: ${status.code}`,
+          );
         }
 
         // Send exit signal
@@ -448,9 +497,8 @@ export async function handleTerminalExecute(
           exitCode: status.code,
         };
         controller.enqueue(
-          new TextEncoder().encode(JSON.stringify(exitResponse) + "\n")
+          new TextEncoder().encode(JSON.stringify(exitResponse) + "\n"),
         );
-
       } catch (error) {
         console.error("Error executing terminal command:", error);
 
@@ -459,7 +507,7 @@ export async function handleTerminalExecute(
           error: error instanceof Error ? error.message : String(error),
         };
         controller.enqueue(
-          new TextEncoder().encode(JSON.stringify(errorResponse) + "\n")
+          new TextEncoder().encode(JSON.stringify(errorResponse) + "\n"),
         );
       } finally {
         // Clean up AbortController from map
@@ -501,7 +549,9 @@ export function handleTerminalAbort(
   if (debugMode) {
     console.debug(`[DEBUG] Terminal abort attempt for request: ${requestId}`);
     console.debug(
-      `[DEBUG] Active terminal requests: ${Array.from(requestAbortControllers.keys())}`,
+      `[DEBUG] Active terminal requests: ${
+        Array.from(requestAbortControllers.keys())
+      }`,
     );
   }
 
@@ -516,7 +566,10 @@ export function handleTerminalAbort(
 
     return c.json({ success: true, message: "Terminal command aborted" });
   } else {
-    return c.json({ error: "Terminal request not found or already completed" }, 404);
+    return c.json(
+      { error: "Terminal request not found or already completed" },
+      404,
+    );
   }
 }
 
@@ -526,9 +579,9 @@ export function handleTerminalAbort(
  */
 export function handleTerminalShells(c: Context) {
   const platform = Deno.build.os;
-  
+
   let shells: string[];
-  
+
   switch (platform) {
     case "windows":
       shells = ["cmd", "powershell", "bash"]; // bash if WSL is available
@@ -541,10 +594,10 @@ export function handleTerminalShells(c: Context) {
       shells = ["bash", "sh"];
   }
 
-  return c.json({ 
+  return c.json({
     shells,
     platform,
-    default: platform === "windows" ? "cmd" : "bash"
+    default: platform === "windows" ? "cmd" : "bash",
   });
 }
 
@@ -555,11 +608,11 @@ export function handleTerminalShells(c: Context) {
 export async function handlePathValidation(c: Context) {
   try {
     const { path } = await c.req.json();
-    
-    if (!path || typeof path !== 'string') {
-      return c.json({ 
-        isValid: false, 
-        message: "Path is required" 
+
+    if (!path || typeof path !== "string") {
+      return c.json({
+        isValid: false,
+        message: "Path is required",
       }, 400);
     }
 
@@ -567,47 +620,76 @@ export async function handlePathValidation(c: Context) {
     if (path.length > 500) {
       return c.json({
         isValid: false,
-        message: "Path is too long"
+        message: "Path is too long",
       });
     }
 
-    if (path.trim() === '') {
+    if (path.trim() === "") {
       return c.json({
         isValid: false,
-        message: "Path cannot be empty"
+        message: "Path cannot be empty",
       });
+    }
+
+    // Get system info to check if we're in WSL
+    const systemInfo = await getSystemInfo();
+
+    // Convert path if needed
+    let validationPath = path.trim();
+
+    console.log("[Path Validation] Received path:", path);
+    console.log("[Path Validation] System is WSL:", systemInfo.isWSL);
+
+    // If we're in WSL, convert Windows paths to WSL format
+    if (systemInfo.isWSL) {
+      const originalPath = validationPath;
+      validationPath = convertWindowsPathToWSL(path.trim());
+      if (originalPath !== validationPath) {
+        console.log(
+          "[Path Validation] Converted Windows path to WSL:",
+          validationPath,
+        );
+      }
     }
 
     // Try to check if path exists and is a directory
     try {
-      const stat = await Deno.stat(path);
-      
+      const stat = await Deno.stat(validationPath);
+
       if (stat.isDirectory) {
         return c.json({
           isValid: true,
-          message: "Directory exists and is accessible"
+          message: "Directory exists and is accessible",
+          normalizedPath: validationPath, // Return the normalized path for frontend use
         });
       } else {
         return c.json({
           isValid: false,
-          message: "Path exists but is not a directory"
+          message: "Path exists but is not a directory",
         });
       }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
+        // For WSL, provide more helpful error message
+        let notFoundMessage = "Directory does not exist";
+        if (systemInfo.isWSL && path.match(/^[A-Za-z]:[\/\\]/)) {
+          notFoundMessage =
+            "Directory does not exist. Windows path was converted to: " +
+            validationPath;
+        }
         return c.json({
           isValid: false,
-          message: "Directory does not exist"
+          message: notFoundMessage,
         });
       } else if (error instanceof Deno.errors.PermissionDenied) {
         return c.json({
           isValid: false,
-          message: "Permission denied - cannot access this directory"
+          message: "Permission denied - cannot access this directory",
         });
       } else {
         return c.json({
           isValid: false,
-          message: "Cannot access directory - invalid path or permission issue"
+          message: "Cannot access directory - invalid path or permission issue",
         });
       }
     }
@@ -615,7 +697,7 @@ export async function handlePathValidation(c: Context) {
     console.error("Error validating path:", error);
     return c.json({
       isValid: false,
-      message: "Failed to validate path"
+      message: "Failed to validate path",
     }, 500);
   }
-} 
+}

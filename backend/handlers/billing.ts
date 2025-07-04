@@ -48,12 +48,12 @@ export async function handleBillingRequest(c: Context) {
       `${homeDir}/.claude.json`,
       `${homeDir}/.config/claude/claude.json`,
       `${homeDir}/AppData/Roaming/Claude/claude.json`,
-      `${homeDir}/Library/Application Support/Claude/claude.json`
+      `${homeDir}/Library/Application Support/Claude/claude.json`,
     ];
-    
+
     let claudeConfigPath: string | null = null;
     let configContent: string | null = null;
-    
+
     for (const path of configPaths) {
       try {
         configContent = await Deno.readTextFile(path);
@@ -63,7 +63,7 @@ export async function handleBillingRequest(c: Context) {
         // Continue to next path
       }
     }
-    
+
     if (!configContent) {
       // Return default values if no config found
       return c.json({
@@ -77,14 +77,14 @@ export async function handleBillingRequest(c: Context) {
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
           linesAdded: 0,
-          linesRemoved: 0
+          linesRemoved: 0,
         },
         billing: {
           dailyAverage: 0,
           monthlyEstimate: 0,
-          currentPeriodSpend: 0
+          currentPeriodSpend: 0,
         },
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       });
     }
 
@@ -96,10 +96,14 @@ export async function handleBillingRequest(c: Context) {
       // not the user's actual project directory
       let currentProject = "";
       let mostRecentTime = 0;
-      
+
       // Find the project with the most recent lastUpdated timestamp
-      for (const [projectPath, projectConfig] of Object.entries(config.projects || {})) {
-        if (projectConfig && typeof projectConfig === 'object') {
+      for (
+        const [projectPath, projectConfig] of Object.entries(
+          config.projects || {},
+        )
+      ) {
+        if (projectConfig && typeof projectConfig === "object") {
           const lastUpdated = (projectConfig as any).lastUpdated;
           if (lastUpdated) {
             const timestamp = new Date(lastUpdated).getTime();
@@ -112,14 +116,18 @@ export async function handleBillingRequest(c: Context) {
       }
 
       // Get project-specific data if available
-      const projectData = currentProject ? config.projects[currentProject] : null;
-      
+      const projectData = currentProject
+        ? config.projects[currentProject]
+        : null;
+
       // Extract usage data from the configuration
       const lastCost = projectData?.lastCost || 0;
       const lastInputTokens = projectData?.lastTotalInputTokens || 0;
       const lastOutputTokens = projectData?.lastTotalOutputTokens || 0;
-      const lastCacheCreationTokens = projectData?.lastTotalCacheCreationInputTokens || 0;
-      const lastCacheReadTokens = projectData?.lastTotalCacheReadInputTokens || 0;
+      const lastCacheCreationTokens =
+        projectData?.lastTotalCacheCreationInputTokens || 0;
+      const lastCacheReadTokens = projectData?.lastTotalCacheReadInputTokens ||
+        0;
       const lastLinesAdded = projectData?.lastLinesAdded || 0;
       const lastLinesRemoved = projectData?.lastLinesRemoved || 0;
       const lastDuration = projectData?.lastDuration || 0;
@@ -129,7 +137,8 @@ export async function handleBillingRequest(c: Context) {
       const sessionDurationFormatted = formatDuration(sessionDurationMs);
 
       // Calculate total tokens used
-      const totalTokens = lastInputTokens + lastOutputTokens + lastCacheCreationTokens + lastCacheReadTokens;
+      const totalTokens = lastInputTokens + lastOutputTokens +
+        lastCacheCreationTokens + lastCacheReadTokens;
 
       // Estimate requests count (rough estimate based on tokens)
       const estimatedRequests = Math.max(1, Math.ceil(totalTokens / 4000));
@@ -144,58 +153,63 @@ export async function handleBillingRequest(c: Context) {
         cacheCreationTokens: lastCacheCreationTokens,
         cacheReadTokens: lastCacheReadTokens,
         linesAdded: lastLinesAdded,
-        linesRemoved: lastLinesRemoved
+        linesRemoved: lastLinesRemoved,
       };
 
       // Calculate billing estimates based on actual usage
       // Get all project costs for daily average calculation
       let totalDailyCost = 0;
       let projectCount = 0;
-      
+
       if (config.projects) {
         const now = Date.now();
         const dayMs = 24 * 60 * 60 * 1000;
-        
+
         for (const projectData of Object.values(config.projects)) {
-          if (projectData && typeof projectData === 'object') {
+          if (projectData && typeof projectData === "object") {
             const projectCost = (projectData as any).lastCost || 0;
             const lastUpdated = (projectData as any).lastUpdated;
-            
-            if (lastUpdated && (now - new Date(lastUpdated).getTime()) < dayMs) {
+
+            if (
+              lastUpdated && (now - new Date(lastUpdated).getTime()) < dayMs
+            ) {
               totalDailyCost += projectCost;
               projectCount++;
             }
           }
         }
       }
-      
+
       // Calculate daily average from actual usage or use minimum estimate
-      const dailyAverage = projectCount > 0 ? totalDailyCost : (lastCost > 0 ? lastCost * 10 : 0);
+      const dailyAverage = projectCount > 0
+        ? totalDailyCost
+        : (lastCost > 0 ? lastCost * 10 : 0);
       const monthlyEstimate = dailyAverage * 30;
       const currentPeriodSpend = lastCost || 0;
 
       // Extract account information
-      const accountInfo = config.oauthAccount ? {
-        email: config.oauthAccount.emailAddress,
-        organization: config.oauthAccount.organizationName,
-        role: config.oauthAccount.organizationRole
-      } : undefined;
+      const accountInfo = config.oauthAccount
+        ? {
+          email: config.oauthAccount.emailAddress,
+          organization: config.oauthAccount.organizationName,
+          role: config.oauthAccount.organizationRole,
+        }
+        : undefined;
 
       const billingInfo: BillingInfo = {
         dailyAverage,
         monthlyEstimate,
         currentPeriodSpend,
-        accountInfo
+        accountInfo,
       };
 
       const response: BillingResponse = {
         usage: usageData,
         billing: billingInfo,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       };
 
       return c.json(response);
-
     } catch (error) {
       console.error("Error parsing config:", error);
       return c.json({
@@ -209,14 +223,14 @@ export async function handleBillingRequest(c: Context) {
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
           linesAdded: 0,
-          linesRemoved: 0
+          linesRemoved: 0,
         },
         billing: {
           dailyAverage: 0,
           monthlyEstimate: 0,
-          currentPeriodSpend: 0
+          currentPeriodSpend: 0,
         },
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       });
     }
   } catch (error) {
@@ -230,7 +244,7 @@ export async function handleBillingRequest(c: Context) {
  */
 function formatDuration(durationMs: number): string {
   if (!durationMs || durationMs === 0) return "0min";
-  
+
   const seconds = Math.floor(durationMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -240,8 +254,10 @@ function formatDuration(durationMs: number): string {
     return `${hours}h ${remainingMinutes}min`;
   } else if (minutes > 0) {
     const remainingSeconds = seconds % 60;
-    return remainingSeconds > 0 ? `${minutes}min ${remainingSeconds}s` : `${minutes}min`;
+    return remainingSeconds > 0
+      ? `${minutes}min ${remainingSeconds}s`
+      : `${minutes}min`;
   } else {
     return `${seconds}s`;
   }
-} 
+}

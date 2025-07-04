@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { 
-  ServerIcon, 
-  CheckCircleIcon, 
-  XCircleIcon, 
+import {
+  ServerIcon,
+  CheckCircleIcon,
+  XCircleIcon,
   StopIcon,
   PencilIcon,
   CheckIcon,
   XMarkIcon,
   FunnelIcon,
-  TrashIcon
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { getApiUrl } from "../../config/api";
 
@@ -63,11 +63,11 @@ export function MCPTab() {
       setLoading(true);
       setError(null);
       const response = await fetch(getApiUrl("/api/mcp"));
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setMcpData(data);
     } catch (err) {
@@ -203,10 +203,11 @@ export function MCPTab() {
     setDeleteConfirm(null);
   };
 
-  const filteredServers = mcpData?.servers.filter(server => {
-    if (selectedCategory === "所有") return true;
-    return server.category === selectedCategory;
-  }) || [];
+  const filteredServers =
+    mcpData?.servers.filter((server) => {
+      if (selectedCategory === "所有") return true;
+      return server.category === selectedCategory;
+    }) || [];
 
   if (loading) {
     return (
@@ -241,7 +242,8 @@ export function MCPTab() {
               确认删除
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              确定要删除服务器 "<span className="font-medium">{deleteConfirm.name}</span>" 吗？
+              确定要删除服务器 "
+              <span className="font-medium">{deleteConfirm.name}</span>" 吗？
               <br />
               <span className="text-sm text-red-600 dark:text-red-400">
                 此操作不可撤销，将执行 claude mcp remove 命令。
@@ -290,14 +292,18 @@ export function MCPTab() {
       {/* Category Filter */}
       <div className="flex items-center space-x-2">
         <FunnelIcon className="h-4 w-4 text-gray-500" />
-        <span className="text-sm text-gray-600 dark:text-gray-400">分类筛选:</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          分类筛选:
+        </span>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         >
-          {categories.map(category => (
-            <option key={category} value={category}>{category}</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
           ))}
         </select>
       </div>
@@ -313,7 +319,9 @@ export function MCPTab() {
               </h3>
               <div className="flex items-center space-x-2 mt-1">
                 {getStatusIcon(mcpData.nativeServerStatus)}
-                <span className={`text-sm ${getStatusColor(mcpData.nativeServerStatus)}`}>
+                <span
+                  className={`text-sm ${getStatusColor(mcpData.nativeServerStatus)}`}
+                >
                   {getStatusText(mcpData.nativeServerStatus)}
                 </span>
               </div>
@@ -327,12 +335,18 @@ export function MCPTab() {
         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
           已配置的 MCP 服务器 ({filteredServers.length})
         </h3>
-        
+
         {filteredServers.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            {selectedCategory === "所有" ? "没有找到已配置的 MCP 服务器" : `没有找到 "${selectedCategory}" 分类的服务器`}
+            {selectedCategory === "所有"
+              ? "没有找到已配置的 MCP 服务器"
+              : `没有找到 "${selectedCategory}" 分类的服务器`}
             <div className="text-sm mt-2">
-              使用 <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">claude mcp add</code> 命令添加服务器
+              使用{" "}
+              <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                claude mcp add
+              </code>{" "}
+              命令添加服务器
             </div>
           </div>
         ) : (
@@ -351,7 +365,9 @@ export function MCPTab() {
                       </h4>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(server.status)}
-                        <span className={`text-sm ${getStatusColor(server.status)}`}>
+                        <span
+                          className={`text-sm ${getStatusColor(server.status)}`}
+                        >
                           {getStatusText(server.status)}
                         </span>
                       </div>
@@ -361,7 +377,7 @@ export function MCPTab() {
                         </span>
                       )}
                     </div>
-                    
+
                     {editingServer?.name === server.name ? (
                       <div className="space-y-3 mt-3">
                         <div>
@@ -384,9 +400,13 @@ export function MCPTab() {
                             onChange={(e) => setEditCategory(e.target.value)}
                             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
-                            {categories.filter(cat => cat !== "所有").map(category => (
-                              <option key={category} value={category}>{category}</option>
-                            ))}
+                            {categories
+                              .filter((cat) => cat !== "所有")
+                              .map((category) => (
+                                <option key={category} value={category}>
+                                  {category}
+                                </option>
+                              ))}
                           </select>
                         </div>
                         <div className="flex space-x-2">
@@ -421,7 +441,7 @@ export function MCPTab() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center space-x-2 ml-4">
                     {editingServer?.name !== server.name && (
                       <>
@@ -460,13 +480,31 @@ export function MCPTab() {
           配置帮助
         </h4>
         <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-          <p>• 使用 <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">claude mcp add &lt;server-name&gt; &lt;path-or-url&gt;</code> 添加新的 MCP 服务器</p>
-          <p>• 使用 <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">claude mcp remove &lt;server-name&gt;</code> 删除 MCP 服务器</p>
-          <p>• 使用 <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">claude mcp list</code> 查看已配置的服务器</p>
+          <p>
+            • 使用{" "}
+            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+              claude mcp add &lt;server-name&gt; &lt;path-or-url&gt;
+            </code>{" "}
+            添加新的 MCP 服务器
+          </p>
+          <p>
+            • 使用{" "}
+            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+              claude mcp remove &lt;server-name&gt;
+            </code>{" "}
+            删除 MCP 服务器
+          </p>
+          <p>
+            • 使用{" "}
+            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+              claude mcp list
+            </code>{" "}
+            查看已配置的服务器
+          </p>
           <p>• 点击编辑按钮可以自定义服务器描述和分类</p>
           <p>• 点击删除按钮可以移除不需要的 MCP 服务器</p>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, CogIcon, CurrencyDollarIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronLeftIcon,
+  CogIcon,
+  CurrencyDollarIcon,
+} from "@heroicons/react/24/outline";
 import { MCPTab } from "./settings/MCPTab";
 import { BillTab } from "./settings/BillTab";
 
@@ -54,12 +58,22 @@ export function Settings() {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 text-secondary hover:text-primary smooth-transition"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             </svg>
           </button>
         </div>
-        
+
         {/* Mobile Tab Menu */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-black-primary border-b border-accent shadow-lg">
@@ -81,7 +95,9 @@ export function Settings() {
                       <Icon className="h-5 w-5 flex-shrink-0" />
                       <div>
                         <div className="font-medium">{tab.name}</div>
-                        <div className="text-xs opacity-70">{tab.description}</div>
+                        <div className="text-xs opacity-70">
+                          {tab.description}
+                        </div>
                       </div>
                     </button>
                   );
@@ -128,7 +144,9 @@ export function Settings() {
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     <div>
                       <div className="font-medium">{tab.name}</div>
-                      <div className="text-xs opacity-70">{tab.description}</div>
+                      <div className="text-xs opacity-70">
+                        {tab.description}
+                      </div>
                     </div>
                   </button>
                 );
@@ -147,4 +165,4 @@ export function Settings() {
       </div>
     </div>
   );
-} 
+}

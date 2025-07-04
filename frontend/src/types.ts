@@ -6,7 +6,12 @@ import type {
 } from "@anthropic-ai/claude-code";
 
 // Thinking mode types
-export type ThinkingMode = "auto" | "think" | "think_hard" | "think_harder" | "ultrathink";
+export type ThinkingMode =
+  | "auto"
+  | "think"
+  | "think_hard"
+  | "think_harder"
+  | "ultrathink";
 
 export interface ThinkingConfig {
   mode: ThinkingMode;
@@ -26,7 +31,7 @@ export const THINKING_MODE_CONFIGS: Record<ThinkingMode, ThinkingConfig> = {
 export const THINKING_MODE_LABELS: Record<ThinkingMode, string> = {
   auto: "Auto",
   think: "Think",
-  think_hard: "Think Hard", 
+  think_hard: "Think Hard",
   think_harder: "Think Harder",
   ultrathink: "Ultrathink",
 };

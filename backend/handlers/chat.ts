@@ -1,6 +1,7 @@
 import { Context } from "hono";
 import { AbortError, query } from "@anthropic-ai/claude-code";
 import type { ChatRequest, StreamResponse } from "../../shared/types.ts";
+import { convertWindowsPathToWSL } from "../history/pathUtils.ts";
 
 /**
  * Executes a Claude command and yields streaming responses
@@ -37,6 +38,42 @@ async function* executeClaudeCommand(
     // Create and store AbortController for this request
     abortController = new AbortController();
     requestAbortControllers.set(requestId, abortController);
+
+    // Log working directory information
+    if (workingDirectory) {
+      console.log("[Chat] Original working directory:", workingDirectory);
+
+      // Check if we're in WSL and need to convert the path
+      const platform = Deno.build.os;
+      let isWSL = false;
+
+      if (platform === "linux") {
+        try {
+          const wslCheck = await new Deno.Command("uname", {
+            args: ["-r"],
+            stdout: "piped",
+            stderr: "piped",
+          }).output();
+
+          if (wslCheck.success) {
+            const kernelInfo = new TextDecoder().decode(wslCheck.stdout)
+              .toLowerCase();
+            isWSL = kernelInfo.includes("microsoft") ||
+              kernelInfo.includes("wsl");
+          }
+        } catch {
+          isWSL = Boolean(Deno.env.get("WSL_DISTRO_NAME")) ||
+            Boolean(Deno.env.get("WSLENV"));
+        }
+      }
+
+      if (isWSL) {
+        const convertedPath = convertWindowsPathToWSL(workingDirectory);
+        if (convertedPath !== workingDirectory) {
+          console.log("[Chat] Converted to WSL path:", convertedPath);
+        }
+      }
+    }
 
     // For compiled binaries, use system claude command to avoid bundled cli.js issues
     let claudePath: string;

@@ -31,7 +31,8 @@ export const TOOL_CONSTANTS = {
 export const BUTTON_STYLES = {
   // Icon buttons (Settings, Theme, History)
   ICON_BUTTON: "p-3 rounded-xl glass-button glow-border smooth-transition",
-  
+
   // History session items
-  HISTORY_ITEM: "p-3 glass-card rounded-lg hover:glow-effect smooth-transition cursor-pointer",
+  HISTORY_ITEM:
+    "p-3 glass-card rounded-lg hover:glow-effect smooth-transition cursor-pointer",
 } as const;

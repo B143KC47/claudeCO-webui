@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { 
-  FolderIcon, 
+import {
+  FolderIcon,
   FolderOpenIcon,
   DocumentIcon,
   ChevronRightIcon,
   ChevronDownIcon,
   MagnifyingGlassIcon,
-  HomeIcon 
+  HomeIcon,
 } from "@heroicons/react/24/outline";
 
 interface FileNode {
@@ -43,9 +43,24 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           path: "/src/components",
           isExpanded: false,
           children: [
-            { name: "App.tsx", type: "file", path: "/src/components/App.tsx", size: 1024 },
-            { name: "Button.tsx", type: "file", path: "/src/components/Button.tsx", size: 512 },
-            { name: "Modal.tsx", type: "file", path: "/src/components/Modal.tsx", size: 768 },
+            {
+              name: "App.tsx",
+              type: "file",
+              path: "/src/components/App.tsx",
+              size: 1024,
+            },
+            {
+              name: "Button.tsx",
+              type: "file",
+              path: "/src/components/Button.tsx",
+              size: 512,
+            },
+            {
+              name: "Modal.tsx",
+              type: "file",
+              path: "/src/components/Modal.tsx",
+              size: 768,
+            },
           ],
         },
         {
@@ -54,8 +69,18 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           path: "/src/hooks",
           isExpanded: false,
           children: [
-            { name: "useAuth.ts", type: "file", path: "/src/hooks/useAuth.ts", size: 256 },
-            { name: "useTheme.ts", type: "file", path: "/src/hooks/useTheme.ts", size: 384 },
+            {
+              name: "useAuth.ts",
+              type: "file",
+              path: "/src/hooks/useAuth.ts",
+              size: 256,
+            },
+            {
+              name: "useTheme.ts",
+              type: "file",
+              path: "/src/hooks/useTheme.ts",
+              size: 384,
+            },
           ],
         },
         { name: "main.tsx", type: "file", path: "/src/main.tsx", size: 512 },
@@ -68,8 +93,18 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
       path: "/public",
       isExpanded: false,
       children: [
-        { name: "index.html", type: "file", path: "/public/index.html", size: 1024 },
-        { name: "favicon.ico", type: "file", path: "/public/favicon.ico", size: 128 },
+        {
+          name: "index.html",
+          type: "file",
+          path: "/public/index.html",
+          size: 1024,
+        },
+        {
+          name: "favicon.ico",
+          type: "file",
+          path: "/public/favicon.ico",
+          size: 128,
+        },
       ],
     },
     { name: "package.json", type: "file", path: "/package.json", size: 1536 },
@@ -85,7 +120,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
 
   const toggleFolder = (path: string) => {
     const updateNode = (nodes: FileNode[]): FileNode[] => {
-      return nodes.map(node => {
+      return nodes.map((node) => {
         if (node.path === path && node.type === "folder") {
           return { ...node, isExpanded: !node.isExpanded };
         }
@@ -95,7 +130,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
         return node;
       });
     };
-    
+
     setFileTree(updateNode(fileTree));
   };
 
@@ -115,11 +150,11 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
         <FolderIcon className="w-4 h-4 text-blue-500" />
       );
     }
-    
+
     // Different icons based on file extension
-    const extension = node.name.split('.').pop()?.toLowerCase();
+    const extension = node.name.split(".").pop()?.toLowerCase();
     let iconColor = "text-gray-400";
-    
+
     switch (extension) {
       case "tsx":
       case "ts":
@@ -143,7 +178,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
         iconColor = "text-orange-400";
         break;
     }
-    
+
     return <DocumentIcon className={`w-4 h-4 ${iconColor}`} />;
   };
 
@@ -155,9 +190,10 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
 
   const renderFileNode = (node: FileNode, depth = 0) => {
     const isSelected = selectedFile === node.path;
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch =
+      searchTerm === "" ||
       node.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (!matchesSearch && node.type === "file") {
       return null;
     }
@@ -181,30 +217,33 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
               )}
             </div>
           )}
-          
+
           {getFileIcon(node)}
-          
+
           <span className="text-sm flex-1 truncate">{node.name}</span>
-          
+
           {node.type === "file" && node.size && (
             <span className="text-xs text-tertiary">
               {formatFileSize(node.size)}
             </span>
           )}
         </div>
-        
+
         {node.type === "folder" && node.isExpanded && node.children && (
           <div>
             {node.children
-              .filter(child => 
-                searchTerm === "" || 
-                child.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (child.type === "folder" && child.children?.some(grandchild => 
-                  grandchild.name.toLowerCase().includes(searchTerm.toLowerCase())
-                ))
+              .filter(
+                (child) =>
+                  searchTerm === "" ||
+                  child.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (child.type === "folder" &&
+                    child.children?.some((grandchild) =>
+                      grandchild.name
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase()),
+                    )),
               )
-              .map(child => renderFileNode(child, depth + 1))
-            }
+              .map((child) => renderFileNode(child, depth + 1))}
           </div>
         )}
       </div>
@@ -218,7 +257,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
 
   const getSelectedFileDetails = () => {
     if (!selectedFile) return null;
-    
+
     const findFile = (nodes: FileNode[]): FileNode | null => {
       for (const node of nodes) {
         if (node.path === selectedFile) return node;
@@ -229,7 +268,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
       }
       return null;
     };
-    
+
     return findFile(fileTree);
   };
 
@@ -243,7 +282,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           <FolderIcon className="w-4 h-4 text-accent" />
           <span>Explorer - {currentPath}</span>
         </div>
-        
+
         <button
           onClick={goHome}
           className="p-2 glass-button glow-border smooth-transition rounded-lg"
@@ -270,10 +309,10 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
         {/* Tree View */}
         <div className="flex-1 glass-card rounded-lg p-3 overflow-y-auto">
           <div className="space-y-1">
-            {fileTree.map(node => renderFileNode(node))}
+            {fileTree.map((node) => renderFileNode(node))}
           </div>
         </div>
-        
+
         {/* File Details */}
         <div className="w-48 glass-card rounded-lg p-3">
           {selectedFileDetails ? (
@@ -284,7 +323,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
                   {selectedFileDetails.name}
                 </span>
               </div>
-              
+
               <div className="space-y-2 text-xs">
                 <div>
                   <span className="text-tertiary">Type:</span>
@@ -292,7 +331,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
                     {selectedFileDetails.type}
                   </span>
                 </div>
-                
+
                 {selectedFileDetails.size && (
                   <div>
                     <span className="text-tertiary">Size:</span>
@@ -301,7 +340,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
                     </span>
                   </div>
                 )}
-                
+
                 <div>
                   <span className="text-tertiary">Path:</span>
                   <div className="text-secondary text-xs mt-1 break-all">
@@ -317,7 +356,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           )}
         </div>
       </div>
-      
+
       {/* Status Bar */}
       <div className="text-xs text-tertiary flex items-center justify-between">
         <span>
@@ -325,18 +364,22 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
             const countItems = (n: FileNode): number => {
               let total = 1;
               if (n.children) {
-                total += n.children.reduce((sum, child) => sum + countItems(child), 0);
+                total += n.children.reduce(
+                  (sum, child) => sum + countItems(child),
+                  0,
+                );
               }
               return total;
             };
             return count + countItems(node);
-          }, 0)} items
+          }, 0)}{" "}
+          items
         </span>
-        
+
         {selectedFileDetails && (
           <span>Selected: {selectedFileDetails.name}</span>
         )}
       </div>
     </div>
   );
-} 
+}

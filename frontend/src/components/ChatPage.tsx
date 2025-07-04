@@ -1,13 +1,13 @@
 import { useEffect, useCallback, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { 
-  ChevronLeftIcon, 
+import {
+  ChevronLeftIcon,
   CogIcon,
   ChatBubbleLeftIcon,
   ComputerDesktopIcon,
   CommandLineIcon,
   FolderIcon,
-  XMarkIcon
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import type { ChatRequest, ChatMessage, ProjectInfo } from "../types";
 import { THINKING_MODE_CONFIGS } from "../types";
@@ -48,6 +48,10 @@ export function ChatPage() {
 
     // URL decode the path
     const decodedPath = decodeURIComponent(rawPath);
+
+    console.log("[ChatPage] Extracted working directory from URL:");
+    console.log("  Raw path:", rawPath);
+    console.log("  Decoded path:", decodedPath);
 
     return decodedPath;
   })();
@@ -128,12 +132,13 @@ export function ChatPage() {
 
       try {
         // Prepare thinking configuration
-        const thinkingConfig = thinkingMode !== "auto" 
-          ? {
-              type: "enabled" as const,
-              budget_tokens: THINKING_MODE_CONFIGS[thinkingMode].budgetTokens,
-            }
-          : undefined;
+        const thinkingConfig =
+          thinkingMode !== "auto"
+            ? {
+                type: "enabled" as const,
+                budget_tokens: THINKING_MODE_CONFIGS[thinkingMode].budgetTokens,
+              }
+            : undefined;
 
         const response = await fetch(getChatUrl(), {
           method: "POST",
@@ -384,9 +389,10 @@ export function ChatPage() {
                     onClick={() => setActiveTab("chat")}
                     className={`
                       flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
-                      ${activeTab === "chat" 
-                        ? "bg-gradient-primary text-primary glow-effect" 
-                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      ${
+                        activeTab === "chat"
+                          ? "bg-gradient-primary text-primary glow-effect"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
                       }
                     `}
                   >
@@ -397,9 +403,10 @@ export function ChatPage() {
                     onClick={() => setActiveTab("browser")}
                     className={`
                       flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
-                      ${activeTab === "browser" 
-                        ? "bg-gradient-primary text-primary glow-effect" 
-                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      ${
+                        activeTab === "browser"
+                          ? "bg-gradient-primary text-primary glow-effect"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
                       }
                     `}
                   >
@@ -410,9 +417,10 @@ export function ChatPage() {
                     onClick={() => setActiveTab("terminal")}
                     className={`
                       flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
-                      ${activeTab === "terminal" 
-                        ? "bg-gradient-primary text-primary glow-effect" 
-                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      ${
+                        activeTab === "terminal"
+                          ? "bg-gradient-primary text-primary glow-effect"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
                       }
                     `}
                   >
@@ -423,9 +431,10 @@ export function ChatPage() {
                     onClick={() => setActiveTab("explorer")}
                     className={`
                       flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
-                      ${activeTab === "explorer" 
-                        ? "bg-gradient-primary text-primary glow-effect" 
-                        : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      ${
+                        activeTab === "explorer"
+                          ? "bg-gradient-primary text-primary glow-effect"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
                       }
                     `}
                   >
@@ -433,11 +442,13 @@ export function ChatPage() {
                     <span className="hidden sm:inline">Explorer</span>
                   </button>
                 </div>
-                
+
                 <button
                   onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
                   className="p-2 text-tertiary hover:text-primary smooth-transition rounded-lg hover:bg-black-secondary/50"
-                  aria-label={isToolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+                  aria-label={
+                    isToolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"
+                  }
                 >
                   <XMarkIcon className="w-4 h-4" />
                 </button>
@@ -451,7 +462,7 @@ export function ChatPage() {
                     <div className="h-full flex flex-col space-y-3 md:space-y-4 min-h-0">
                       {/* Chat Messages */}
                       <ChatMessages messages={messages} isLoading={isLoading} />
-                      
+
                       {/* Thinking Mode Selector */}
                       <div className="flex-shrink-0">
                         <ThinkingModeSelector
@@ -460,7 +471,7 @@ export function ChatPage() {
                           disabled={isLoading}
                         />
                       </div>
-                      
+
                       {/* Chat Input */}
                       <ChatInput
                         input={input}

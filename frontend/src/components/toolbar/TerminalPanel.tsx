@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { 
-  CommandLineIcon, 
+import {
+  CommandLineIcon,
   TrashIcon,
   DocumentDuplicateIcon,
-  XMarkIcon
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 interface TerminalEntry {
@@ -48,7 +48,8 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [currentWorkingDirectory, setCurrentWorkingDirectory] = useState(workingDirectory);
+  const [currentWorkingDirectory, setCurrentWorkingDirectory] =
+    useState(workingDirectory);
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,18 +73,19 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         if (response.ok) {
           const info = await response.json();
           setSystemInfo(info);
-          
+
           // Only use system info directory if user hasn't selected a specific project directory
           // workingDirectory prop takes priority over system currentWorkingDirectory
-          const effectiveWorkingDirectory = workingDirectory && workingDirectory !== "~" 
-            ? workingDirectory 
-            : info.currentWorkingDirectory || workingDirectory;
-            
+          const effectiveWorkingDirectory =
+            workingDirectory && workingDirectory !== "~"
+              ? workingDirectory
+              : info.currentWorkingDirectory || workingDirectory;
+
           // Update working directory only if we don't have a user-specified one
           if (!workingDirectory || workingDirectory === "~") {
             setCurrentWorkingDirectory(effectiveWorkingDirectory);
           }
-          
+
           // Add welcome message after system info is loaded
           const welcomeEntry: TerminalEntry = {
             id: Date.now(),
@@ -118,20 +120,23 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
   }, [workingDirectory]);
 
   // Detect and handle directory-changing commands
-  const updateWorkingDirectoryFromCommand = (command: string, output: string) => {
+  const updateWorkingDirectoryFromCommand = (
+    command: string,
+    output: string,
+  ) => {
     const trimmedCommand = command.trim().toLowerCase();
-    
+
     // Handle 'pwd' command output
-    if (trimmedCommand === 'pwd' && output.trim().startsWith('/')) {
+    if (trimmedCommand === "pwd" && output.trim().startsWith("/")) {
       const newDir = output.trim();
       if (newDir !== currentWorkingDirectory) {
         setCurrentWorkingDirectory(newDir);
       }
       return;
     }
-    
+
     // Handle 'cd' commands - but don't execute pwd automatically to avoid recursion
-    if (trimmedCommand.startsWith('cd ')) {
+    if (trimmedCommand.startsWith("cd ")) {
       // For now, we'll let the backend handle the directory change
       // The working directory will be updated when the user manually runs pwd
       // or we could implement a smarter way to detect directory changes
@@ -146,7 +151,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
 
     const platform = systemInfo.platform;
     const wsuffix = systemInfo.isWSL ? " (WSL)" : "";
-    
+
     if (platform === "windows") {
       return `Windows Terminal${wsuffix} - ${currentWorkingDirectory}`;
     } else if (platform === "darwin") {
@@ -162,19 +167,23 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
   const getPrompt = () => {
     const username = systemInfo?.username || "user";
     const hostname = systemInfo?.hostname || "claude";
-    
+
     // Process working directory for display
     let displayDirectory = currentWorkingDirectory;
-    
+
     // Simplify home directory display
-    if (systemInfo?.homeDirectory && displayDirectory.startsWith(systemInfo.homeDirectory)) {
+    if (
+      systemInfo?.homeDirectory &&
+      displayDirectory.startsWith(systemInfo.homeDirectory)
+    ) {
       if (displayDirectory === systemInfo.homeDirectory) {
         displayDirectory = "~";
       } else {
-        displayDirectory = "~" + displayDirectory.substring(systemInfo.homeDirectory.length);
+        displayDirectory =
+          "~" + displayDirectory.substring(systemInfo.homeDirectory.length);
       }
     }
-    
+
     // If directory is too long, show only the last few components
     if (displayDirectory.length > 50) {
       const parts = displayDirectory.split("/");
@@ -182,7 +191,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         displayDirectory = ".../" + parts.slice(-2).join("/");
       }
     }
-    
+
     return `${username}@${hostname}:${displayDirectory}$ `;
   };
 
@@ -191,7 +200,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     const requestId = `terminal-${Date.now()}-${Math.random()}`;
     setCurrentRequestId(requestId);
     setIsExecuting(true);
-    
+
     // Store the command for directory tracking
     const originalCommand = command.trim();
 
@@ -200,7 +209,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         command: originalCommand,
         workingDirectory: currentWorkingDirectory,
         requestId,
-        shell: "bash" // Use bash for WSL compatibility
+        shell: "bash", // Use bash for WSL compatibility
       };
 
       const response = await fetch("/api/terminal/execute", {
@@ -260,21 +269,20 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
           console.error("Error parsing final stream response:", e);
         }
       }
-      
+
       // Check for directory changes after command completes
       updateWorkingDirectoryFromCommand(originalCommand, commandOutput);
-
     } catch (error) {
       console.error("Error executing command:", error);
-      
+
       const errorEntry: TerminalEntry = {
         id: Date.now(),
         type: "error",
         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date(),
       };
-      
-      setEntries(prev => [...prev, errorEntry]);
+
+      setEntries((prev) => [...prev, errorEntry]);
     } finally {
       setIsExecuting(false);
       setCurrentRequestId(null);
@@ -287,7 +295,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
       case "start":
         // Command started - no action needed
         break;
-      
+
       case "stdout":
         if (response.data) {
           const outputEntry: TerminalEntry = {
@@ -296,10 +304,10 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: response.data,
             timestamp: new Date(),
           };
-          setEntries(prev => [...prev, outputEntry]);
+          setEntries((prev) => [...prev, outputEntry]);
         }
         break;
-      
+
       case "stderr":
         if (response.data) {
           const errorEntry: TerminalEntry = {
@@ -308,10 +316,10 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: response.data,
             timestamp: new Date(),
           };
-          setEntries(prev => [...prev, errorEntry]);
+          setEntries((prev) => [...prev, errorEntry]);
         }
         break;
-      
+
       case "error":
         const errorEntry: TerminalEntry = {
           id: Date.now() + Math.random(),
@@ -319,9 +327,9 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
           content: `Error: ${response.error || "Unknown error"}`,
           timestamp: new Date(),
         };
-        setEntries(prev => [...prev, errorEntry]);
+        setEntries((prev) => [...prev, errorEntry]);
         break;
-      
+
       case "exit":
         // Command completed - could show exit code if non-zero
         if (response.exitCode && response.exitCode !== 0) {
@@ -331,7 +339,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: `Process exited with code ${response.exitCode}`,
             timestamp: new Date(),
           };
-          setEntries(prev => [...prev, exitEntry]);
+          setEntries((prev) => [...prev, exitEntry]);
         }
         break;
     }
@@ -354,18 +362,18 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
 
   const handleCommandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentCommand.trim() || isExecuting) return;
-    
+
     // Handle clear command locally for immediate response
     if (currentCommand.trim().toLowerCase() === "clear") {
       setEntries([]);
       setCurrentCommand("");
-      setCommandHistory(prev => [...prev, currentCommand]);
+      setCommandHistory((prev) => [...prev, currentCommand]);
       setHistoryIndex(-1);
       return;
     }
-    
+
     // Add command to entries
     const commandEntry: TerminalEntry = {
       id: Date.now(),
@@ -373,15 +381,15 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
       content: currentCommand,
       timestamp: new Date(),
     };
-    
-    setEntries(prev => [...prev, commandEntry]);
-    
+
+    setEntries((prev) => [...prev, commandEntry]);
+
     // Update command history
-    setCommandHistory(prev => [...prev, currentCommand]);
+    setCommandHistory((prev) => [...prev, currentCommand]);
     const cmd = currentCommand;
     setCurrentCommand("");
     setHistoryIndex(-1);
-    
+
     // Execute command
     await executeCommand(cmd);
   };
@@ -393,7 +401,9 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         const newIndex = historyIndex + 1;
         if (newIndex < commandHistory.length) {
           setHistoryIndex(newIndex);
-          setCurrentCommand(commandHistory[commandHistory.length - 1 - newIndex]);
+          setCurrentCommand(
+            commandHistory[commandHistory.length - 1 - newIndex],
+          );
         }
       }
     } else if (e.key === "ArrowDown") {
@@ -442,7 +452,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             </span>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           {isExecuting && (
             <button
@@ -464,7 +474,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
       </div>
 
       {/* Terminal Display */}
-      <div 
+      <div
         ref={terminalRef}
         onClick={handleTerminalClick}
         className="flex-1 glass-card rounded-lg p-4 font-mono text-sm cursor-text overflow-y-auto min-h-0"
@@ -488,10 +498,12 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
                   </button>
                 </div>
               )}
-              
+
               {entry.type === "output" && (
                 <div className="group flex items-start gap-2">
-                  <span className="text-secondary whitespace-pre-wrap">{entry.content}</span>
+                  <span className="text-secondary whitespace-pre-wrap">
+                    {entry.content}
+                  </span>
                   <button
                     onClick={() => copyEntry(entry.content)}
                     className="ml-auto opacity-0 group-hover:opacity-100 hover:text-accent smooth-transition p-1"
@@ -501,10 +513,12 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
                   </button>
                 </div>
               )}
-              
+
               {entry.type === "error" && (
                 <div className="group flex items-start gap-2">
-                  <span className="text-red-400 whitespace-pre-wrap">{entry.content}</span>
+                  <span className="text-red-400 whitespace-pre-wrap">
+                    {entry.content}
+                  </span>
                   <button
                     onClick={() => copyEntry(entry.content)}
                     className="ml-auto opacity-0 group-hover:opacity-100 hover:text-accent smooth-transition p-1"
@@ -516,9 +530,12 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
               )}
             </div>
           ))}
-          
+
           {/* Current command input */}
-          <form onSubmit={handleCommandSubmit} className="flex items-center gap-2">
+          <form
+            onSubmit={handleCommandSubmit}
+            className="flex items-center gap-2"
+          >
             <span className="text-accent font-medium flex-shrink-0">
               {getPrompt()}
             </span>
@@ -540,4 +557,4 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
       </div>
     </div>
   );
-} 
+}

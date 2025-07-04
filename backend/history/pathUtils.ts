@@ -60,3 +60,47 @@ export function validateEncodedProjectName(encodedName: string): boolean {
 
   return true;
 }
+
+/**
+ * Convert Windows path to WSL path format
+ * Examples:
+ * - C:\Users\username\Desktop -> /mnt/c/Users/username/Desktop
+ * - D:\Projects\myapp -> /mnt/d/Projects/myapp
+ * - \\wsl$\Ubuntu\home\user -> /home/user
+ * - /mnt/c/Users/username -> /mnt/c/Users/username (unchanged)
+ */
+export function convertWindowsPathToWSL(path: string): string {
+  // If already a WSL/Unix path, return as-is
+  if (path.startsWith("/")) {
+    return path;
+  }
+
+  // Handle WSL network path (\\wsl$\distro\...)
+  if (path.startsWith("\\\\wsl$\\") || path.startsWith("\\\\wsl.localhost\\")) {
+    // Extract the path after the distro name
+    const parts = path.split("\\").filter((p) => p);
+    if (parts.length > 2) {
+      // Skip "wsl$" or "wsl.localhost" and distro name
+      const unixPath = "/" + parts.slice(2).join("/");
+      return unixPath;
+    }
+  }
+
+  // Handle Windows drive paths (C:\, D:\, etc.)
+  const driveMatch = path.match(/^([A-Za-z]):[\\\/]/);
+  if (driveMatch) {
+    const driveLetter = driveMatch[1].toLowerCase();
+    // Replace backslashes with forward slashes and remove the drive colon
+    const remainingPath = path.substring(3).replace(/\\/g, "/");
+    return `/mnt/${driveLetter}/${remainingPath}`;
+  }
+
+  // Handle UNC paths (\\server\share\...)
+  if (path.startsWith("\\\\")) {
+    // For now, just replace backslashes
+    return path.replace(/\\/g, "/");
+  }
+
+  // Fallback: just replace backslashes with forward slashes
+  return path.replace(/\\/g, "/");
+}

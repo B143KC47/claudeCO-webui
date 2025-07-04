@@ -93,7 +93,9 @@ function EmptyState() {
             💬
           </span>
         </div>
-        <p className="text-lg font-medium text-gradient">Start a conversation with Claude</p>
+        <p className="text-lg font-medium text-gradient">
+          Start a conversation with Claude
+        </p>
         <p className="text-sm mt-2 opacity-80 text-tertiary">
           Type your message below to begin
         </p>

@@ -65,9 +65,7 @@ export function PermissionDialog({
             </span>{" "}
             tool.
           </p>
-          <p className="text-sm text-tertiary mb-6">
-            Do you want to proceed?
-          </p>
+          <p className="text-sm text-tertiary mb-6">Do you want to proceed?</p>
 
           {/* Action buttons */}
           <div className="space-y-3">

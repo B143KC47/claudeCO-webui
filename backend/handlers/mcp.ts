@@ -23,16 +23,18 @@ interface UserMCPConfig {
 
 const PREDEFINED_CATEGORIES = [
   "开发工具",
-  "数据处理", 
+  "数据处理",
   "AI模型",
   "系统工具",
   "Web服务",
   "项目管理",
-  "其他"
+  "其他",
 ];
 
 // Get MCP servers using Claude CLI
-async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type: string }[]> {
+async function getClaudeMcpServers(): Promise<
+  { name: string; url?: string; type: string }[]
+> {
   try {
     const cmd = new Deno.Command("claude", {
       args: ["mcp", "list"],
@@ -41,46 +43,51 @@ async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type
     });
 
     const { code, stdout, stderr } = await cmd.output();
-    
+
     if (code !== 0) {
       const errorOutput = new TextDecoder().decode(stderr);
-      console.error("Error getting MCP servers (exit code", code + "):", errorOutput);
+      console.error(
+        "Error getting MCP servers (exit code",
+        code + "):",
+        errorOutput,
+      );
       return [];
     }
 
     const output = new TextDecoder().decode(stdout);
     console.log("Claude MCP list output:", output); // Debug info
-    
+
     const servers: { name: string; url?: string; type: string }[] = [];
-    const lines = output.trim().split("\n").filter(line => line.trim());
-    
+    const lines = output.trim().split("\n").filter((line) => line.trim());
+
     if (lines.length === 0) {
       console.log("No MCP servers found in output");
       return [];
     }
-    
+
     for (const line of lines) {
       console.log("Parsing line:", line); // Debug info
-      
+
       // Try multiple parsing patterns for different formats
-      let serverInfo: { name: string; url?: string; type: string } | null = null;
-      
+      let serverInfo: { name: string; url?: string; type: string } | null =
+        null;
+
       // Pattern 1: "server-name: url (TYPE)"
       let match = line.match(/^(.+?):\s*(.+?)\s*\((\w+)\)$/);
       if (match) {
         serverInfo = {
           name: match[1].trim(),
           url: match[2].trim(),
-          type: match[3].trim()
+          type: match[3].trim(),
         };
       } else {
-        // Pattern 2: "server-name (TYPE): url"  
+        // Pattern 2: "server-name (TYPE): url"
         match = line.match(/^(.+?)\s*\((\w+)\):\s*(.+)$/);
         if (match) {
           serverInfo = {
             name: match[1].trim(),
             url: match[3].trim(),
-            type: match[2].trim()
+            type: match[2].trim(),
           };
         } else {
           // Pattern 3: "server-name: url"
@@ -89,7 +96,7 @@ async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type
             serverInfo = {
               name: match[1].trim(),
               url: match[2].trim(),
-              type: "Unknown"
+              type: "Unknown",
             };
           } else {
             // Pattern 4: Just server name (no URL)
@@ -97,13 +104,13 @@ async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type
             if (match && !line.includes(":")) {
               serverInfo = {
                 name: match[1].trim(),
-                type: "Local"
+                type: "Local",
               };
             }
           }
         }
       }
-      
+
       if (serverInfo) {
         console.log("Parsed server:", serverInfo); // Debug info
         servers.push(serverInfo);
@@ -111,7 +118,7 @@ async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type
         console.warn("Could not parse line:", line);
       }
     }
-    
+
     console.log("Total servers found:", servers.length); // Debug info
     return servers;
   } catch (error) {
@@ -120,16 +127,20 @@ async function getClaudeMcpServers(): Promise<{ name: string; url?: string; type
   }
 }
 
-async function checkServerStatus(server: { name: string; url?: string; type: string }): Promise<"running" | "stopped" | "error" | "unknown"> {
+async function checkServerStatus(
+  server: { name: string; url?: string; type: string },
+): Promise<"running" | "stopped" | "error" | "unknown"> {
   try {
     // For HTTP servers, try to make a simple request
-    if (server.url && (server.type === "HTTP" || server.url.startsWith("http"))) {
+    if (
+      server.url && (server.type === "HTTP" || server.url.startsWith("http"))
+    ) {
       try {
         const response = await fetch(server.url, {
           method: "OPTIONS", // Less intrusive than GET
-          signal: AbortSignal.timeout(5000) // 5 second timeout
+          signal: AbortSignal.timeout(5000), // 5 second timeout
         });
-        
+
         if (response.ok || response.status === 405) { // 405 = Method Not Allowed is also acceptable
           return "running";
         } else {
@@ -140,7 +151,7 @@ async function checkServerStatus(server: { name: string; url?: string; type: str
         return "unknown";
       }
     }
-    
+
     // For local servers, check process list
     if (server.type === "Local" || !server.url) {
       try {
@@ -151,7 +162,7 @@ async function checkServerStatus(server: { name: string; url?: string; type: str
         });
 
         const { code, stdout } = await cmd.output();
-        
+
         if (code === 0) {
           const output = new TextDecoder().decode(stdout);
           // Check for server-specific processes
@@ -161,21 +172,24 @@ async function checkServerStatus(server: { name: string; url?: string; type: str
             `${server.name}-server`,
             `mcp_${server.name}`,
           ];
-          
+
           for (const pattern of serverPatterns) {
             if (output.includes(pattern)) {
               return "running";
             }
           }
         }
-        
+
         return "stopped";
       } catch (psError) {
-        console.warn(`Failed to check process list for ${server.name}:`, psError);
+        console.warn(
+          `Failed to check process list for ${server.name}:`,
+          psError,
+        );
         return "unknown";
       }
     }
-    
+
     return "unknown";
   } catch (error) {
     console.error(`Error checking status for server ${server.name}:`, error);
@@ -183,7 +197,9 @@ async function checkServerStatus(server: { name: string; url?: string; type: str
   }
 }
 
-async function checkNativeClaudeServerStatus(): Promise<"running" | "stopped" | "unknown"> {
+async function checkNativeClaudeServerStatus(): Promise<
+  "running" | "stopped" | "unknown"
+> {
   try {
     // Check if native Claude MCP server is running
     const cmd = new Deno.Command("ps", {
@@ -193,19 +209,19 @@ async function checkNativeClaudeServerStatus(): Promise<"running" | "stopped" | 
     });
 
     const { code, stdout } = await cmd.output();
-    
+
     if (code === 0) {
       const output = new TextDecoder().decode(stdout);
-      
+
       // Check for various Claude MCP server process patterns
       const claudeServerPatterns = [
         "claude mcp serve",
-        "claude-mcp-server", 
+        "claude-mcp-server",
         "claude_mcp_server",
         "@anthropic-ai/claude-code",
-        "claude-code"
+        "claude-code",
       ];
-      
+
       for (const pattern of claudeServerPatterns) {
         if (output.toLowerCase().includes(pattern.toLowerCase())) {
           console.log(`Found Claude server process matching: ${pattern}`);
@@ -213,7 +229,7 @@ async function checkNativeClaudeServerStatus(): Promise<"running" | "stopped" | 
         }
       }
     }
-    
+
     return "stopped";
   } catch (error) {
     console.warn("Failed to check Claude native server status:", error);
@@ -231,7 +247,7 @@ async function getMCPServers(): Promise<MCPServer[]> {
   // Process servers with parallel status checks for better performance
   const serverPromises = claudeServers.map(async (server) => {
     const userServerConfig = userConfig.servers?.[server.name];
-    
+
     // Check server status
     const status = await checkServerStatus(server);
     console.log(`Server ${server.name} status: ${status}`); // Debug info
@@ -239,15 +255,19 @@ async function getMCPServers(): Promise<MCPServer[]> {
     return {
       name: server.name,
       status,
-      type: server.type === "HTTP" ? "HTTP MCP Server" : 
-            server.type === "Local" ? "Local MCP Server" :
-            `${server.type} MCP Server`,
-      description: userServerConfig?.customDescription || 
-                  (server.url ? `MCP server at ${server.url}` : `Local MCP server: ${server.name}`),
+      type: server.type === "HTTP"
+        ? "HTTP MCP Server"
+        : server.type === "Local"
+        ? "Local MCP Server"
+        : `${server.type} MCP Server`,
+      description: userServerConfig?.customDescription ||
+        (server.url
+          ? `MCP server at ${server.url}`
+          : `Local MCP server: ${server.name}`),
       customDescription: userServerConfig?.customDescription,
       category: userServerConfig?.category || "其他",
       tools: [], // Could be enhanced to fetch actual tools list
-      url: server.url
+      url: server.url,
     };
   });
 
@@ -261,9 +281,9 @@ async function getMCPServers(): Promise<MCPServer[]> {
 async function readUserMCPConfig(): Promise<UserMCPConfig> {
   const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE");
   if (!home) return {};
-  
+
   const userConfigPath = join(home, ".claude", "user_mcp_config.json");
-  
+
   try {
     if (await exists(userConfigPath)) {
       const configContent = await Deno.readTextFile(userConfigPath);
@@ -272,7 +292,7 @@ async function readUserMCPConfig(): Promise<UserMCPConfig> {
   } catch (error) {
     console.error("Error reading user MCP config:", error);
   }
-  
+
   return {};
 }
 
@@ -281,9 +301,9 @@ async function writeUserMCPConfig(config: UserMCPConfig): Promise<void> {
   if (!home) {
     throw new Error("Could not find home directory");
   }
-  
+
   const userConfigPath = join(home, ".claude", "user_mcp_config.json");
-  
+
   try {
     // 确保目录存在
     const configDir = join(home, ".claude");
@@ -295,7 +315,7 @@ async function writeUserMCPConfig(config: UserMCPConfig): Promise<void> {
         throw err;
       }
     }
-    
+
     await Deno.writeTextFile(userConfigPath, JSON.stringify(config, null, 2));
   } catch (error) {
     console.error("Error writing user MCP config:", error);
@@ -312,17 +332,23 @@ async function removeMCPServer(serverName: string): Promise<void> {
     });
 
     const { code, stdout, stderr } = await cmd.output();
-    
+
     if (code !== 0) {
       const errorOutput = new TextDecoder().decode(stderr);
-      console.error(`Error removing MCP server ${serverName} (exit code ${code}):`, errorOutput);
+      console.error(
+        `Error removing MCP server ${serverName} (exit code ${code}):`,
+        errorOutput,
+      );
       throw new Error(`Failed to remove server: ${errorOutput}`);
     }
 
     const output = new TextDecoder().decode(stdout);
     console.log(`Successfully removed MCP server ${serverName}:`, output);
   } catch (error) {
-    console.error(`Failed to execute claude mcp remove for ${serverName}:`, error);
+    console.error(
+      `Failed to execute claude mcp remove for ${serverName}:`,
+      error,
+    );
     throw error;
   }
 }
@@ -346,7 +372,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Error fetching MCP data:", error);
@@ -358,7 +384,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -373,7 +399,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -385,7 +411,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -404,12 +430,12 @@ export async function handleMCP(ctx: Context): Promise<Response> {
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
       const currentConfig = await readUserMCPConfig();
-      
+
       if (!currentConfig.servers) {
         currentConfig.servers = {};
       }
@@ -429,7 +455,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Error updating server configuration:", error);
@@ -441,7 +467,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -460,7 +486,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -476,7 +502,10 @@ export async function handleMCP(ctx: Context): Promise<Response> {
           console.log(`Removed ${serverName} from user config`);
         }
       } catch (configError) {
-        console.warn("Failed to update user config after removal:", configError);
+        console.warn(
+          "Failed to update user config after removal:",
+          configError,
+        );
         // Don't fail the whole operation for this
       }
 
@@ -488,7 +517,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Error removing MCP server:", error);
@@ -500,7 +529,7 @@ export async function handleMCP(ctx: Context): Promise<Response> {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -514,6 +543,6 @@ export async function handleMCP(ctx: Context): Promise<Response> {
     {
       status: 404,
       headers: { "Content-Type": "application/json" },
-    }
+    },
   );
-} 
+}
