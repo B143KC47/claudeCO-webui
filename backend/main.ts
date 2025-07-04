@@ -13,6 +13,13 @@ import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
 import { handleMCP } from "./handlers/mcp.ts";
 import { handleBillingRequest } from "./handlers/billing.ts";
+import { 
+  handleTerminalExecute, 
+  handleTerminalAbort, 
+  handleTerminalShells,
+  handleTerminalInfo,
+  handlePathValidation
+} from "./handlers/terminal.ts";
 
 const args = await parseCliArgs();
 
@@ -89,6 +96,17 @@ app.delete("/api/mcp/remove", async (c) => {
 });
 
 app.get("/api/billing", (c) => handleBillingRequest(c));
+
+// Terminal API routes
+app.post("/api/terminal/execute", (c) => handleTerminalExecute(c, requestAbortControllers));
+
+app.post("/api/terminal/abort/:requestId", (c) => handleTerminalAbort(c, requestAbortControllers));
+
+app.get("/api/terminal/shells", (c) => handleTerminalShells(c));
+
+app.get("/api/terminal/info", (c) => handleTerminalInfo(c));
+
+app.post("/api/terminal/validate-path", (c) => handlePathValidation(c));
 
 // Static file serving with SPA fallback
 // Resolve dist directory path relative to this module

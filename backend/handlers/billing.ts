@@ -91,15 +91,23 @@ export async function handleBillingRequest(c: Context) {
     try {
       const config = JSON.parse(configContent!);
 
-      // Get current working directory to find the right project
-      const cwd = Deno.cwd();
+      // Find the most recently used project instead of using current working directory
+      // Note: We don't use Deno.cwd() because it returns the server process directory,
+      // not the user's actual project directory
       let currentProject = "";
+      let mostRecentTime = 0;
       
-      // Find the current project in config
+      // Find the project with the most recent lastUpdated timestamp
       for (const [projectPath, projectConfig] of Object.entries(config.projects || {})) {
-        if (cwd.includes(projectPath) || projectPath.includes(cwd)) {
-          currentProject = projectPath;
-          break;
+        if (projectConfig && typeof projectConfig === 'object') {
+          const lastUpdated = (projectConfig as any).lastUpdated;
+          if (lastUpdated) {
+            const timestamp = new Date(lastUpdated).getTime();
+            if (timestamp > mostRecentTime) {
+              mostRecentTime = timestamp;
+              currentProject = projectPath;
+            }
+          }
         }
       }
 
