@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ServerIcon,
   CheckCircleIcon,
@@ -28,6 +28,106 @@ interface MCPResponse {
   nativeServerStatus: "running" | "stopped" | "unknown";
 }
 
+// 骨架屏组件
+function MCPSkeletonLoader() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-center">
+        <div className="h-6 bg-black-tertiary rounded w-48"></div>
+        <div className="h-8 bg-gradient-primary rounded w-16"></div>
+      </div>
+
+      {/* Filter skeleton */}
+      <div className="flex items-center space-x-2">
+        <div className="h-4 w-4 bg-black-tertiary rounded"></div>
+        <div className="h-4 bg-black-tertiary rounded w-16"></div>
+        <div className="h-8 bg-black-quaternary rounded w-32"></div>
+      </div>
+
+      {/* Native server skeleton */}
+      <div className="glass-card p-4">
+        <div className="flex items-center space-x-3">
+          <div className="h-5 w-5 bg-gradient-primary rounded"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-black-tertiary rounded w-32"></div>
+            <div className="h-4 bg-black-quaternary rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Server list skeleton */}
+      <div>
+        <div className="h-5 bg-black-tertiary rounded w-48 mb-4"></div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-card p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className="h-5 w-5 bg-black-tertiary rounded"></div>
+                    <div className="h-5 bg-black-tertiary rounded w-32"></div>
+                    <div className="h-4 bg-gradient-primary rounded w-16"></div>
+                    <div className="h-5 bg-black-quaternary rounded w-12"></div>
+                  </div>
+                  <div className="h-4 bg-black-quaternary rounded w-full mb-2"></div>
+                  <div className="h-3 bg-black-quaternary rounded w-48"></div>
+                </div>
+                <div className="flex space-x-2 ml-4">
+                  <div className="h-6 w-6 bg-black-tertiary rounded"></div>
+                  <div className="h-6 w-6 bg-black-tertiary rounded"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 缓存管理
+class MCPDataCache {
+  private data: MCPResponse | null = null;
+  private categories: string[] = [];
+  private lastFetch: number = 0;
+  private readonly cacheTimeout = 30000; // 30秒缓存
+
+  setMCPData(data: MCPResponse) {
+    this.data = data;
+    this.lastFetch = Date.now();
+  }
+
+  setCategories(categories: string[]) {
+    this.categories = categories;
+  }
+
+  getMCPData(): MCPResponse | null {
+    if (this.isExpired()) {
+      this.clear();
+      return null;
+    }
+    return this.data;
+  }
+
+  getCategories(): string[] {
+    return this.categories;
+  }
+
+  isExpired(): boolean {
+    return Date.now() - this.lastFetch > this.cacheTimeout;
+  }
+
+  clear() {
+    this.data = null;
+    this.categories = [];
+    this.lastFetch = 0;
+  }
+}
+
+// 单例缓存实例
+const mcpCache = new MCPDataCache();
+
 export function MCPTab() {
   const [mcpData, setMcpData] = useState<MCPResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,26 +140,82 @@ export function MCPTab() {
   const [saving, setSaving] = useState(false);
   const [deletingServer, setDeletingServer] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<MCPServer | null>(null);
+  
+  // 防抖相关
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastRefreshRef = useRef<number>(0);
 
-  useEffect(() => {
-    loadMCPData();
-    loadCategories();
+  // 防抖刷新函数
+  const debouncedRefresh = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshRef.current;
+    
+    // 如果距离上次刷新不足1秒，则忽略
+    if (timeSinceLastRefresh < 1000) {
+      return;
+    }
+
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    refreshTimeoutRef.current = setTimeout(() => {
+      lastRefreshRef.current = now;
+      loadMCPData(true); // 强制刷新，跳过缓存
+    }, 300);
   }, []);
 
-  const loadCategories = async () => {
+  useEffect(() => {
+    // 组件挂载时，尝试从缓存加载数据
+    const cachedData = mcpCache.getMCPData();
+    const cachedCategories = mcpCache.getCategories();
+    
+    if (cachedData && cachedCategories.length > 0) {
+      setMcpData(cachedData);
+      setCategories(["所有", ...cachedCategories]);
+      setLoading(false);
+    } else {
+      // 并行加载数据
+      Promise.all([
+        loadMCPData(),
+        loadCategories()
+      ]).finally(() => {
+        setLoading(false);
+      });
+    }
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const loadCategories = useCallback(async () => {
     try {
       const response = await fetch(getApiUrl("/api/mcp/categories"));
       if (response.ok) {
         const data = await response.json();
-        setCategories(["所有", ...data.categories]);
+        const categoryList = data.categories;
+        mcpCache.setCategories(categoryList);
+        setCategories(["所有", ...categoryList]);
       }
     } catch (error) {
       console.error("Failed to load categories:", error);
     }
-  };
+  }, []);
 
-  const loadMCPData = async () => {
+  const loadMCPData = useCallback(async (forceRefresh = false) => {
     try {
+      // 如果不是强制刷新，先检查缓存
+      if (!forceRefresh) {
+        const cachedData = mcpCache.getMCPData();
+        if (cachedData) {
+          setMcpData(cachedData);
+          return;
+        }
+      }
+
       setLoading(true);
       setError(null);
       const response = await fetch(getApiUrl("/api/mcp"));
@@ -69,6 +225,7 @@ export function MCPTab() {
       }
 
       const data = await response.json();
+      mcpCache.setMCPData(data);
       setMcpData(data);
     } catch (err) {
       console.error("Error loading MCP data:", err);
@@ -76,22 +233,22 @@ export function MCPTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleRefresh = () => {
-    loadMCPData();
-  };
+  const handleRefresh = useCallback(() => {
+    debouncedRefresh();
+  }, [debouncedRefresh]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "running":
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-accent" />;
       case "stopped":
-        return <StopIcon className="h-4 w-4 text-gray-500" />;
+        return <StopIcon className="h-4 w-4 text-tertiary" />;
       case "error":
-        return <XCircleIcon className="h-4 w-4 text-red-500" />;
+        return <XCircleIcon className="h-4 w-4" style={{ color: 'var(--accent-secondary)' }} />;
       default:
-        return <XCircleIcon className="h-4 w-4 text-yellow-500" />;
+        return <XCircleIcon className="h-4 w-4" style={{ color: 'var(--accent-tertiary)' }} />;
     }
   };
 
@@ -111,23 +268,23 @@ export function MCPTab() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "running":
-        return "text-green-600 dark:text-green-400";
+        return "text-accent";
       case "stopped":
-        return "text-gray-600 dark:text-gray-400";
+        return "text-tertiary";
       case "error":
-        return "text-red-600 dark:text-red-400";
+        return "text-accent";
       default:
-        return "text-yellow-600 dark:text-yellow-400";
+        return "text-secondary";
     }
   };
 
-  const handleEditServer = (server: MCPServer) => {
+  const handleEditServer = useCallback((server: MCPServer) => {
     setEditingServer(server);
     setEditDescription(server.customDescription || server.description);
     setEditCategory(server.category || "其他");
-  };
+  }, []);
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingServer) return;
 
     try {
@@ -145,7 +302,7 @@ export function MCPTab() {
       });
 
       if (response.ok) {
-        await loadMCPData();
+        await loadMCPData(true); // 强制刷新缓存
         setEditingServer(null);
       } else {
         const errorData = await response.json();
@@ -157,19 +314,19 @@ export function MCPTab() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [editingServer, editDescription, editCategory, loadMCPData]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingServer(null);
     setEditDescription("");
     setEditCategory("");
-  };
+  }, []);
 
-  const handleDeleteClick = (server: MCPServer) => {
+  const handleDeleteClick = useCallback((server: MCPServer) => {
     setDeleteConfirm(server);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deleteConfirm) return;
 
     try {
@@ -185,8 +342,18 @@ export function MCPTab() {
       });
 
       if (response.ok) {
-        await loadMCPData();
+        // 乐观更新：立即从UI中移除服务器
+        setMcpData(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            servers: prev.servers.filter(s => s.name !== deleteConfirm.name)
+          };
+        });
         setDeleteConfirm(null);
+        
+        // 后台重新加载数据以确保一致性
+        setTimeout(() => loadMCPData(true), 500);
       } else {
         const errorData = await response.json();
         alert(`删除失败: ${errorData.error || "未知错误"}`);
@@ -197,11 +364,11 @@ export function MCPTab() {
     } finally {
       setDeletingServer(null);
     }
-  };
+  }, [deleteConfirm, loadMCPData]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setDeleteConfirm(null);
-  };
+  }, []);
 
   const filteredServers =
     mcpData?.servers.filter((server) => {
@@ -210,21 +377,16 @@ export function MCPTab() {
     }) || [];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600 dark:text-gray-400">加载中...</span>
-      </div>
-    );
+    return <MCPSkeletonLoader />;
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-600 dark:text-red-400 p-4">
+      <div className="text-center text-accent p-4">
         <p>加载失败: {error}</p>
         <button
           onClick={handleRefresh}
-          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="mt-2 px-4 py-2 glass-button text-primary smooth-transition"
         >
           重试
         </button>
@@ -236,23 +398,23 @@ export function MCPTab() {
     <div className="space-y-6">
       {/* 删除确认对话框 */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="glass-card p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-primary mb-4">
               确认删除
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-secondary mb-6">
               确定要删除服务器 "
-              <span className="font-medium">{deleteConfirm.name}</span>" 吗？
+              <span className="font-medium text-accent">{deleteConfirm.name}</span>" 吗？
               <br />
-              <span className="text-sm text-red-600 dark:text-red-400">
+              <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>
                 此操作不可撤销，将执行 claude mcp remove 命令。
               </span>
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleDeleteCancel}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                className="px-4 py-2 text-secondary hover:bg-black-tertiary rounded smooth-transition"
                 disabled={deletingServer === deleteConfirm.name}
               >
                 取消
@@ -260,7 +422,7 @@ export function MCPTab() {
               <button
                 onClick={handleDeleteConfirm}
                 disabled={deletingServer === deleteConfirm.name}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex items-center"
+                className="px-4 py-2 bg-gradient-secondary text-primary rounded glow-effect disabled:opacity-50 flex items-center smooth-transition"
               >
                 {deletingServer === deleteConfirm.name ? (
                   <>
@@ -278,30 +440,31 @@ export function MCPTab() {
 
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-xl font-semibold text-primary">
           MCP 服务器管理
         </h2>
         <button
           onClick={handleRefresh}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-3 py-1 text-sm glass-button text-primary smooth-transition disabled:opacity-50"
+          disabled={loading}
         >
-          刷新
+          {loading ? "刷新中..." : "刷新"}
         </button>
       </div>
 
       {/* Category Filter */}
       <div className="flex items-center space-x-2">
-        <FunnelIcon className="h-4 w-4 text-gray-500" />
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <FunnelIcon className="h-4 w-4 text-tertiary" />
+        <span className="text-sm text-secondary">
           分类筛选:
         </span>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          className="px-2 py-1 text-sm glass-input text-primary focus:border-accent smooth-transition"
         >
           {categories.map((category) => (
-            <option key={category} value={category}>
+            <option key={category} value={category} className="bg-black-primary text-primary">
               {category}
             </option>
           ))}
@@ -310,11 +473,11 @@ export function MCPTab() {
 
       {/* Native Claude Server Status */}
       {mcpData?.nativeServerStatus && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="glass-card p-4 glow-border">
           <div className="flex items-center space-x-3">
-            <ServerIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <ServerIcon className="h-5 w-5 text-accent" />
             <div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100">
+              <h3 className="font-medium text-primary">
                 Claude Code 本地服务器
               </h3>
               <div className="flex items-center space-x-2 mt-1">
@@ -332,18 +495,18 @@ export function MCPTab() {
 
       {/* Configured MCP Servers */}
       <div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-medium text-primary mb-4">
           已配置的 MCP 服务器 ({filteredServers.length})
         </h3>
 
         {filteredServers.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+          <div className="text-center text-secondary py-8">
             {selectedCategory === "所有"
               ? "没有找到已配置的 MCP 服务器"
               : `没有找到 "${selectedCategory}" 分类的服务器`}
             <div className="text-sm mt-2">
               使用{" "}
-              <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">
+              <code className="bg-black-tertiary px-1 rounded">
                 claude mcp add
               </code>{" "}
               命令添加服务器
@@ -354,13 +517,13 @@ export function MCPTab() {
             {filteredServers.map((server) => (
               <div
                 key={server.name}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800"
+                className="glass-card p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <ServerIcon className="h-5 w-5 text-gray-500" />
-                      <h4 className="font-medium text-gray-900 dark:text-white">
+                      <ServerIcon className="h-5 w-5 text-tertiary" />
+                      <h4 className="font-medium text-primary">
                         {server.name}
                       </h4>
                       <div className="flex items-center space-x-2">
@@ -372,7 +535,7 @@ export function MCPTab() {
                         </span>
                       </div>
                       {server.category && (
-                        <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                        <span className="px-2 py-1 text-xs bg-black-tertiary text-secondary rounded">
                           {server.category}
                         </span>
                       )}
@@ -381,29 +544,29 @@ export function MCPTab() {
                     {editingServer?.name === server.name ? (
                       <div className="space-y-3 mt-3">
                         <div>
-                          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-sm text-secondary mb-1">
                             自定义描述:
                           </label>
                           <textarea
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 glass-input text-primary"
                             rows={2}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-sm text-secondary mb-1">
                             分类:
                           </label>
                           <select
                             value={editCategory}
                             onChange={(e) => setEditCategory(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            className="px-3 py-2 glass-input text-primary"
                           >
                             {categories
                               .filter((cat) => cat !== "所有")
                               .map((category) => (
-                                <option key={category} value={category}>
+                                <option key={category} value={category} className="bg-black-primary text-primary">
                                   {category}
                                 </option>
                               ))}
@@ -413,14 +576,14 @@ export function MCPTab() {
                           <button
                             onClick={handleSaveEdit}
                             disabled={saving}
-                            className="flex items-center px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                            className="flex items-center px-3 py-1 text-sm glass-button text-primary glow-effect disabled:opacity-50 smooth-transition"
                           >
                             <CheckIcon className="h-4 w-4 mr-1" />
                             {saving ? "保存中..." : "保存"}
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="flex items-center px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                            className="flex items-center px-3 py-1 text-sm bg-black-tertiary text-secondary rounded hover:bg-black-quaternary smooth-transition"
                           >
                             <XMarkIcon className="h-4 w-4 mr-1" />
                             取消
@@ -429,10 +592,10 @@ export function MCPTab() {
                       </div>
                     ) : (
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <p className="text-sm text-secondary mb-2">
                           {server.customDescription || server.description}
                         </p>
-                        <div className="text-xs text-gray-500 dark:text-gray-500">
+                        <div className="text-xs text-tertiary">
                           <span>类型: {server.type}</span>
                           {server.url && (
                             <span className="ml-4">地址: {server.url}</span>
@@ -447,19 +610,19 @@ export function MCPTab() {
                       <>
                         <button
                           onClick={() => handleEditServer(server)}
-                          className="p-1 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                          className="p-1 text-tertiary hover:text-accent smooth-transition"
                           title="编辑服务器"
                         >
                           <PencilIcon className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(server)}
-                          className="p-1 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                          className="p-1 text-tertiary hover:text-accent smooth-transition"
                           title="删除服务器"
                           disabled={deletingServer === server.name}
                         >
                           {deletingServer === server.name ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-accent border-t-transparent"></div>
                           ) : (
                             <TrashIcon className="h-4 w-4" />
                           )}
@@ -475,28 +638,28 @@ export function MCPTab() {
       </div>
 
       {/* Configuration Help */}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+      <div className="glass-card p-4">
+        <h4 className="font-medium text-primary mb-2">
           配置帮助
         </h4>
-        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+        <div className="text-sm text-secondary space-y-1">
           <p>
             • 使用{" "}
-            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+            <code className="bg-black-tertiary px-1 rounded text-accent">
               claude mcp add &lt;server-name&gt; &lt;path-or-url&gt;
             </code>{" "}
             添加新的 MCP 服务器
           </p>
           <p>
             • 使用{" "}
-            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+            <code className="bg-black-tertiary px-1 rounded text-accent">
               claude mcp remove &lt;server-name&gt;
             </code>{" "}
             删除 MCP 服务器
           </p>
           <p>
             • 使用{" "}
-            <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+            <code className="bg-black-tertiary px-1 rounded text-accent">
               claude mcp list
             </code>{" "}
             查看已配置的服务器

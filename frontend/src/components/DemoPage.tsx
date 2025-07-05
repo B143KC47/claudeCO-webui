@@ -290,7 +290,7 @@ export function DemoPage() {
                 {isCompleted && (
                   <button
                     onClick={startDemo}
-                    className="px-3 py-1 text-xs bg-blue-200 dark:bg-blue-700 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-300 dark:hover:bg-blue-600"
+                    className="px-3 py-1 text-xs bg-orange-200 dark:bg-orange-700 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-300 dark:hover:bg-orange-600"
                   >
                     Restart
                   </button>

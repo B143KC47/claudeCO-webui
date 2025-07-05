@@ -201,7 +201,7 @@ export function BillTab() {
             <p className="text-xs sm:text-sm text-gray-400 mb-1">
               Input Tokens
             </p>
-            <p className="text-base sm:text-lg font-bold text-blue-400">
+            <p className="text-base sm:text-lg font-bold text-orange-400">
               {formatNumber(usage.inputTokens)}
             </p>
           </div>

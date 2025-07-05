@@ -442,7 +442,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
           <CommandLineIcon className="w-4 h-4 text-accent" />
           <span>{getTerminalTitle()}</span>
           {systemInfo?.isWSL && (
-            <span className="text-blue-400 text-xs bg-blue-500/20 px-2 py-1 rounded">
+            <span className="text-orange-400 text-xs bg-orange-500/20 px-2 py-1 rounded">
               WSL
             </span>
           )}

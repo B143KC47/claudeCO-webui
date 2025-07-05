@@ -184,9 +184,9 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
   const getFileIcon = (node: FileNode) => {
     if (node.type === "folder") {
       return node.isExpanded ? (
-        <FolderOpenIcon className="w-4 h-4 text-blue-400" />
+        <FolderOpenIcon className="w-4 h-4 text-orange-400" />
       ) : (
-        <FolderIcon className="w-4 h-4 text-blue-500" />
+        <FolderIcon className="w-4 h-4 text-orange-500" />
       );
     }
 
@@ -197,7 +197,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
     switch (extension) {
       case "tsx":
       case "ts":
-        iconColor = "text-blue-400";
+        iconColor = "text-orange-400";
         break;
       case "js":
       case "jsx":
