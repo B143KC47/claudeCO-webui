@@ -21,6 +21,7 @@ import {
   handleTerminalShells,
 } from "./handlers/terminal.ts";
 import { handleFilesList } from "./handlers/files.ts";
+import { handleSessionSave, handleSessionGet, handleSessionDelete } from "./handlers/sessions.ts";
 
 const args = await parseCliArgs();
 
@@ -117,6 +118,11 @@ app.post("/api/terminal/validate-path", (c) => handlePathValidation(c));
 
 // Files API routes
 app.post("/api/files/list", (c) => handleFilesList(c));
+
+// Session API routes
+app.post("/api/sessions/:sessionId/save", (c) => handleSessionSave(c));
+app.get("/api/sessions/:sessionId", (c) => handleSessionGet(c));
+app.delete("/api/sessions/:sessionId", (c) => handleSessionDelete(c));
 
 // Static file serving with SPA fallback
 // Resolve dist directory path relative to this module

@@ -16,6 +16,7 @@ import { useClaudeStreaming } from "../hooks/useClaudeStreaming";
 import { useChatState } from "../hooks/chat/useChatState";
 import { usePermissions } from "../hooks/chat/usePermissions";
 import { useAbortController } from "../hooks/chat/useAbortController";
+import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { ThemeToggle } from "./chat/ThemeToggle";
 import { HistoryButton } from "./chat/HistoryButton";
 import { ChatInput } from "./chat/ChatInput";
@@ -23,6 +24,7 @@ import { ChatMessages } from "./chat/ChatMessages";
 import { ThinkingModeSelector } from "./chat/ThinkingModeSelector";
 import { PermissionDialog } from "./PermissionDialog";
 import { HistoryView } from "./HistoryView";
+import { SessionManager } from "./SessionManager";
 import { BrowserPanel } from "./toolbar/BrowserPanel";
 import { TerminalPanel } from "./toolbar/TerminalPanel";
 import { ExplorerPanel } from "./toolbar/ExplorerPanel";
@@ -36,10 +38,11 @@ type MainTab = "chat" | "browser" | "terminal" | "explorer";
 export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [activeTab, setActiveTab] = useState<MainTab>("chat");
   const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+  const [showSessionManager, setShowSessionManager] = useState(false);
 
   // Extract and normalize working directory from URL
   const workingDirectory = (() => {
@@ -58,8 +61,7 @@ export function ChatPage() {
 
   // Get current view from query parameters
   const currentView = searchParams.get("view");
-  // TODO: sessionId will be used for conversation restoration in issue #112
-  // const sessionId = searchParams.get("sessionId");
+  const urlSessionId = searchParams.get("sessionId");
   const isHistoryView = currentView === "history";
 
   const { theme, toggleTheme } = useTheme();
@@ -75,6 +77,7 @@ export function ChatPage() {
     hasShownInitMessage,
     currentAssistantMessage,
     thinkingMode,
+    setMessages,
     setInput,
     setCurrentSessionId,
     setHasShownInitMessage,
@@ -97,6 +100,20 @@ export function ChatPage() {
     allowToolTemporary,
     allowToolPermanent,
   } = usePermissions();
+
+  // Session persistence
+  const { saveSession, loadSession, createNewSession } = useSessionPersistence({
+    messages,
+    currentSessionId,
+    workingDirectory,
+    onSessionIdChange: (sessionId) => {
+      setCurrentSessionId(sessionId);
+      // Update URL with new session ID
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set("sessionId", sessionId);
+      setSearchParams(newSearchParams);
+    },
+  });
 
   const handlePermissionError = useCallback(
     (toolName: string, pattern: string, toolUseId: string) => {
@@ -280,14 +297,52 @@ export function ChatPage() {
   }, [closePermissionDialog]);
 
   const handleHistoryClick = useCallback(() => {
-    const searchParams = new URLSearchParams();
-    searchParams.set("view", "history");
-    navigate({ search: searchParams.toString() });
-  }, [navigate]);
+    setShowSessionManager(true);
+  }, []);
 
   const handleOpenSettings = useCallback(() => {
     navigate("/settings");
   }, [navigate]);
+
+  // Session management handlers
+  const handleSessionSelect = useCallback(async (sessionId: string) => {
+    const loadedMessages = await loadSession(sessionId);
+    if (loadedMessages.length > 0) {
+      setMessages(loadedMessages);
+      setCurrentSessionId(sessionId);
+      
+      // Update URL with selected session
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.set("sessionId", sessionId);
+      setSearchParams(newSearchParams);
+    }
+    setShowSessionManager(false);
+  }, [loadSession, setMessages, setCurrentSessionId, searchParams, setSearchParams]);
+
+  const handleSessionCreate = useCallback(async () => {
+    // Clear current session
+    setMessages([]);
+    setHasShownInitMessage(false);
+    setHasReceivedInit(false);
+    
+    // Create new session
+    const newSessionId = await createNewSession();
+    setCurrentSessionId(newSessionId);
+    
+    // Update URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set("sessionId", newSessionId);
+    setSearchParams(newSearchParams);
+    
+    setShowSessionManager(false);
+  }, [createNewSession, setMessages, setCurrentSessionId, setHasShownInitMessage, setHasReceivedInit, searchParams, setSearchParams]);
+
+  // Load session from URL on mount
+  useEffect(() => {
+    if (urlSessionId && urlSessionId !== currentSessionId) {
+      handleSessionSelect(urlSessionId);
+    }
+  }, [urlSessionId]);
 
   // Load projects to get encodedName mapping
   useEffect(() => {
@@ -533,6 +588,17 @@ export function ChatPage() {
           onAllowPermanent={handlePermissionAllowPermanent}
           onDeny={handlePermissionDeny}
           onClose={closePermissionDialog}
+        />
+      )}
+
+      {/* Session Manager */}
+      {showSessionManager && (
+        <SessionManager
+          currentSessionId={currentSessionId}
+          workingDirectory={workingDirectory}
+          onSessionSelect={handleSessionSelect}
+          onSessionCreate={handleSessionCreate}
+          onClose={() => setShowSessionManager(false)}
         />
       )}
     </div>

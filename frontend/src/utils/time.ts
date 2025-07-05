@@ -50,3 +50,12 @@ export function formatRelativeTime(timestamp: number): string {
 
   return messageTime.fromNow();
 }
+
+/**
+ * Format a date as a distance from now
+ * @param date - Date object
+ * @returns Formatted relative time string (e.g., "2 hours ago")
+ */
+export function formatDistanceToNow(date: Date): string {
+  return formatRelativeTime(date.getTime());
+}

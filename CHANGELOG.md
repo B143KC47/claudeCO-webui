@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Comprehensive session management system with automatic persistence
+- Session browser UI with search, filtering, and tagging capabilities
+- Automatic session title generation from first user message
+- Session import/export functionality for backup and sharing
+- IndexedDB storage for offline session access
+- Session metadata tracking (created time, last updated, message count)
+- URL integration for direct session linking (?sessionId=xxx)
+- Debounced auto-save with sendBeacon fallback
+- Session cleanup for old conversations
+- Visual message type styling (MCP tools, todo lists, thinking, read/write operations)
+
+### Changed
+- History button now opens session manager instead of legacy history view
+- Enhanced message components with tool-specific visual styles
+- Improved loading animations with thinking-themed design
+
 ## [v0.1.22](https://github.com/sugyan/claude-code-webui/compare/v0.1.21...v0.1.22) - 2025-06-25
 - Improve README with modern design and better organization by @sugyan in https://github.com/sugyan/claude-code-webui/pull/93
 - Migrate backend CLI from manual parsing to Cliffy framework by @sugyan in https://github.com/sugyan/claude-code-webui/pull/95
