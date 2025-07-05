@@ -333,3 +333,178 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
+
+/* Tool-specific message styles */
+.tool-message-mcp {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-message-mcp::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+  animation: rotate-gradient 20s linear infinite;
+}
+
+.tool-message-todo::before {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 48px;
+  opacity: 0.05;
+  color: var(--accent-primary);
+}
+
+.tool-message-thinking {
+  background-image: 
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 10px,
+      rgba(59, 130, 246, 0.03) 10px,
+      rgba(59, 130, 246, 0.03) 20px
+    );
+}
+
+.tool-message-write::after {
+  content: "✏️";
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-size: 32px;
+  opacity: 0.08;
+  transform: rotate(-15deg);
+}
+
+.tool-message-read {
+  border-left: 4px solid;
+  border-image: linear-gradient(to bottom, #6366f1, #a855f7) 1;
+}
+
+/* Gradient animations */
+@keyframes rotate-gradient {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Enhanced tool badges */
+.tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-badge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    left: 100%;
+  }
+}
+
+/* Special effects for thinking messages */
+.thinking-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin: 0 2px;
+  animation: thinking-pulse 1.5s ease-in-out infinite;
+}
+
+.thinking-indicator:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.thinking-indicator:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes thinking-pulse {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Enhanced collapsible details for tool results */
+.tool-result-details {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass-bg) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Todo list specific styling */
+.todo-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.todo-status-completed {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.todo-status-in-progress {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  animation: rotate-slow 3s linear infinite;
+}
+
+.todo-status-pending {
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

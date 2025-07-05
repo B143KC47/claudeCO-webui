@@ -11,6 +11,7 @@ interface CollapsibleDetailsProps {
   };
   icon?: React.ReactNode;
   badge?: string;
+  className?: string;
 }
 
 export function CollapsibleDetails({
@@ -19,13 +20,14 @@ export function CollapsibleDetails({
   colorScheme,
   icon,
   badge,
+  className,
 }: CollapsibleDetailsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasDetails = details.trim().length > 0;
 
   return (
     <div
-      className={`mb-3 p-3 rounded-lg ${colorScheme.bg} border ${colorScheme.border}`}
+      className={`mb-3 p-3 rounded-lg ${colorScheme.bg} border ${colorScheme.border} ${className || ""}`}
     >
       <div
         className={`${colorScheme.header} text-xs font-medium mb-1 flex items-center gap-2 ${hasDetails ? "cursor-pointer hover:opacity-80" : ""}`}
