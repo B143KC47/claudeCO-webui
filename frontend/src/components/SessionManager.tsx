@@ -30,7 +30,9 @@ export function SessionManager({
   onClose,
 }: SessionManagerProps) {
   const [sessions, setSessions] = useState<SessionMetadata[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<SessionMetadata[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<SessionMetadata[]>(
+    [],
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,14 +68,18 @@ export function SessionManager({
       filtered = filtered.filter(
         (session) =>
           session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          session.firstMessage?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          session.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
+          session.firstMessage
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          session.lastMessage
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()),
       );
     }
 
     if (selectedTags.length > 0) {
       filtered = filtered.filter((session) =>
-        selectedTags.every((tag) => session.tags?.includes(tag))
+        selectedTags.every((tag) => session.tags?.includes(tag)),
       );
     }
 
@@ -82,7 +88,7 @@ export function SessionManager({
 
   // Get all unique tags
   const allTags = Array.from(
-    new Set(sessions.flatMap((s) => s.tags || []))
+    new Set(sessions.flatMap((s) => s.tags || [])),
   ).sort();
 
   const handleDelete = async (sessionId: string) => {
@@ -152,10 +158,7 @@ export function SessionManager({
         <div className="p-6 border-b border-accent/20">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gradient">Sessions</h2>
-            <button
-              onClick={onClose}
-              className={BUTTON_STYLES.ICON_SMALL}
-            >
+            <button onClick={onClose} className={BUTTON_STYLES.ICON_SMALL}>
               <XMarkIcon className="w-6 h-6 text-tertiary hover:text-primary smooth-transition" />
             </button>
           </div>
@@ -172,10 +175,7 @@ export function SessionManager({
                 className="w-full pl-10 pr-4 py-2 glass-input text-primary placeholder-tertiary focus:border-accent/50"
               />
             </div>
-            <button
-              onClick={onSessionCreate}
-              className={BUTTON_STYLES.PRIMARY}
-            >
+            <button onClick={onSessionCreate} className={BUTTON_STYLES.PRIMARY}>
               <PlusIcon className="w-5 h-5 mr-2" />
               New Session
             </button>
@@ -191,7 +191,7 @@ export function SessionManager({
                     setSelectedTags((prev) =>
                       prev.includes(tag)
                         ? prev.filter((t) => t !== tag)
-                        : [...prev, tag]
+                        : [...prev, tag],
                     )
                   }
                   className={`px-3 py-1 rounded-full text-xs font-medium smooth-transition ${
@@ -246,7 +246,10 @@ export function SessionManager({
                           }
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
-                              handleTitleUpdate(session.sessionId, editingTitle);
+                              handleTitleUpdate(
+                                session.sessionId,
+                                editingTitle,
+                              );
                             } else if (e.key === "Escape") {
                               setEditingSessionId(null);
                             }

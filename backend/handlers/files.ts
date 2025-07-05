@@ -1,5 +1,8 @@
 import { Context } from "hono";
-import { convertWindowsPathToWSL, convertWSLPathToWindows } from "../history/pathUtils.ts";
+import {
+  convertWindowsPathToWSL,
+  convertWSLPathToWindows,
+} from "../history/pathUtils.ts";
 
 interface FileItem {
   name: string;
@@ -73,8 +76,8 @@ async function canUseWSL(): Promise<boolean> {
  */
 function isWSLPath(path: string): boolean {
   // WSL paths start with /mnt/ or are standard Unix paths when running inside WSL
-  return path.startsWith("/mnt/") || 
-         (path.startsWith("/") && !path.startsWith("//"));
+  return path.startsWith("/mnt/") ||
+    (path.startsWith("/") && !path.startsWith("//"));
 }
 
 /**
@@ -98,8 +101,10 @@ async function normalizePath(inputPath: string): Promise<string> {
   // Check if we're running inside WSL or if we're on Windows with WSL available
   const inWSL = await isWSL();
   const hasWSL = await canUseWSL();
-  
-  console.log(`[Files] Environment: inWSL=${inWSL}, hasWSL=${hasWSL}, platform=${Deno.build.os}`);
+
+  console.log(
+    `[Files] Environment: inWSL=${inWSL}, hasWSL=${hasWSL}, platform=${Deno.build.os}`,
+  );
 
   // If running inside WSL, convert Windows paths to WSL format
   if (inWSL) {
@@ -124,7 +129,10 @@ async function normalizePath(inputPath: string): Promise<string> {
   } catch (error) {
     // If realPath fails, use the path as-is
     // This might happen for WSL paths on Windows host
-    console.warn(`[Files] Failed to resolve real path for ${normalizedPath}:`, error);
+    console.warn(
+      `[Files] Failed to resolve real path for ${normalizedPath}:`,
+      error,
+    );
   }
 
   console.log(`[Files] Final normalized path: ${normalizedPath}`);
@@ -141,7 +149,7 @@ async function getFileInfo(
 ): Promise<FileItem | null> {
   try {
     const stat = await Deno.stat(fullPath);
-    
+
     const item: FileItem = {
       name,
       type: stat.isDirectory ? "folder" : "file",
@@ -178,11 +186,12 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
   try {
     // Check if we can use WSL for this path
     const hasWSL = await canUseWSL();
-    const shouldUseWSL = Deno.build.os === "windows" && hasWSL && isWSLPath(dirPath);
+    const shouldUseWSL = Deno.build.os === "windows" && hasWSL &&
+      isWSLPath(dirPath);
 
     if (shouldUseWSL) {
       console.log(`[Files] Using WSL to list directory: ${dirPath}`);
-      
+
       try {
         const wslCmd = await new Deno.Command("wsl.exe", {
           args: ["ls", "-la", "--time-style=iso", dirPath],
@@ -192,10 +201,10 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
 
         if (wslCmd.code === 0) {
           const output = new TextDecoder().decode(wslCmd.stdout);
-          const lines = output.split("\n").filter(line => line.trim());
-          
+          const lines = output.split("\n").filter((line) => line.trim());
+
           console.log(`[Files] WSL ls output has ${lines.length} lines`);
-          
+
           for (const line of lines) {
             // Skip total line and current/parent directory entries
             if (line.startsWith("total") || line.match(/\s+\.+\s*$/)) {
@@ -209,12 +218,12 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
               const size = parseInt(parts[4]) || 0;
               const date = parts[5] + " " + parts[6];
               const name = parts.slice(8).join(" ");
-              
+
               // Skip . and .. entries
               if (name === "." || name === "..") {
                 continue;
               }
-              
+
               const isDirectory = permissions.startsWith("d");
               const item: FileItem = {
                 name,
@@ -224,13 +233,13 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
                 lastModified: new Date(date).toISOString(),
                 permissions: permissions.slice(1),
               };
-              
+
               files.push(item);
             }
           }
-          
+
           console.log(`[Files] WSL listing found ${files.length} items`);
-          
+
           return files.sort((a, b) => {
             // Folders first, then alphabetical
             if (a.type !== b.type) {
@@ -240,7 +249,10 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
           });
         } else {
           const errorOutput = new TextDecoder().decode(wslCmd.stderr);
-          console.error(`[Files] WSL ls command failed with code ${wslCmd.code}:`, errorOutput);
+          console.error(
+            `[Files] WSL ls command failed with code ${wslCmd.code}:`,
+            errorOutput,
+          );
           throw new Error(`WSL directory listing failed: ${errorOutput}`);
         }
       } catch (wslError) {
@@ -251,22 +263,24 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
 
     // Standard Deno directory listing for non-WSL paths
     console.log(`[Files] Using Deno to list directory: ${dirPath}`);
-    
+
     const pathToRead = Deno.build.os === "windows" && isWSLPath(dirPath)
-      ? convertWSLPathToWindows(dirPath) 
+      ? convertWSLPathToWindows(dirPath)
       : dirPath;
 
     console.log(`[Files] Reading path: ${pathToRead}`);
 
     for await (const entry of Deno.readDir(pathToRead)) {
       // Skip hidden files starting with . (except current dir)
-      if (entry.name.startsWith(".") && entry.name !== "." && entry.name !== "..") {
+      if (
+        entry.name.startsWith(".") && entry.name !== "." && entry.name !== ".."
+      ) {
         continue;
       }
 
       const fullPath = `${pathToRead}/${entry.name}`;
       const relativePath = `${dirPath}/${entry.name}`;
-      
+
       const fileInfo = await getFileInfo(fullPath, entry.name, relativePath);
       if (fileInfo) {
         files.push(fileInfo);
@@ -282,7 +296,6 @@ async function listDirectory(dirPath: string): Promise<FileItem[]> {
       }
       return a.name.localeCompare(b.name);
     });
-
   } catch (error) {
     console.error(`[Files] Failed to list directory ${dirPath}:`, error);
     throw new Error(`Cannot access directory: ${dirPath}`);
@@ -308,7 +321,7 @@ export async function handleFilesList(c: Context) {
 
     // Normalize and validate the path
     const normalizedPath = await normalizePath(request.path);
-    
+
     if (debugMode) {
       console.debug(`[DEBUG] Normalized path: ${normalizedPath}`);
     }
@@ -316,11 +329,12 @@ export async function handleFilesList(c: Context) {
     // Check if the path exists and is a directory
     try {
       const hasWSL = await canUseWSL();
-      const shouldUseWSL = Deno.build.os === "windows" && hasWSL && isWSLPath(normalizedPath);
-      
+      const shouldUseWSL = Deno.build.os === "windows" && hasWSL &&
+        isWSLPath(normalizedPath);
+
       if (shouldUseWSL) {
         console.log(`[Files] Using WSL to validate path: ${normalizedPath}`);
-        
+
         const wslCheck = await new Deno.Command("wsl.exe", {
           args: ["test", "-d", normalizedPath],
           stdout: "piped",
@@ -329,36 +343,48 @@ export async function handleFilesList(c: Context) {
 
         if (wslCheck.code !== 0) {
           const errorOutput = new TextDecoder().decode(wslCheck.stderr);
-          console.error(`[Files] WSL path validation failed for ${normalizedPath}:`, errorOutput);
-          return c.json({ 
+          console.error(
+            `[Files] WSL path validation failed for ${normalizedPath}:`,
+            errorOutput,
+          );
+          return c.json({
             error: `Directory not found: ${request.path}`,
-            details: `Path ${normalizedPath} does not exist or is not accessible via WSL`
+            details:
+              `Path ${normalizedPath} does not exist or is not accessible via WSL`,
           }, 404);
         }
-        
-        console.log(`[Files] WSL path validation successful for: ${normalizedPath}`);
+
+        console.log(
+          `[Files] WSL path validation successful for: ${normalizedPath}`,
+        );
       } else {
         // Use Deno for non-WSL paths
-        const pathToCheck = Deno.build.os === "windows" && isWSLPath(normalizedPath)
-          ? convertWSLPathToWindows(normalizedPath)
-          : normalizedPath;
-        
+        const pathToCheck =
+          Deno.build.os === "windows" && isWSLPath(normalizedPath)
+            ? convertWSLPathToWindows(normalizedPath)
+            : normalizedPath;
+
         console.log(`[Files] Using Deno to validate path: ${pathToCheck}`);
-        
+
         const stat = await Deno.stat(pathToCheck);
         if (!stat.isDirectory) {
-          return c.json({ 
-            error: `Path is not a directory: ${request.path}` 
+          return c.json({
+            error: `Path is not a directory: ${request.path}`,
           }, 400);
         }
-        
-        console.log(`[Files] Deno path validation successful for: ${pathToCheck}`);
+
+        console.log(
+          `[Files] Deno path validation successful for: ${pathToCheck}`,
+        );
       }
     } catch (error) {
-      console.error(`[Files] Path validation failed for ${normalizedPath}:`, error);
-      return c.json({ 
+      console.error(
+        `[Files] Path validation failed for ${normalizedPath}:`,
+        error,
+      );
+      return c.json({
         error: `Cannot access path: ${request.path}`,
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       }, 404);
     }
 
@@ -366,8 +392,9 @@ export async function handleFilesList(c: Context) {
     const files = await listDirectory(normalizedPath);
 
     // Calculate parent path
-    const parentPath = normalizedPath === "/" ? undefined : 
-      normalizedPath.split("/").slice(0, -1).join("/") || "/";
+    const parentPath = normalizedPath === "/"
+      ? undefined
+      : normalizedPath.split("/").slice(0, -1).join("/") || "/";
 
     const response: ListFilesResponse = {
       files,
@@ -380,7 +407,6 @@ export async function handleFilesList(c: Context) {
     }
 
     return c.json(response);
-
   } catch (error) {
     console.error("Error listing files:", error);
     return c.json({
@@ -388,4 +414,4 @@ export async function handleFilesList(c: Context) {
       details: error instanceof Error ? error.message : String(error),
     }, 500);
   }
-} 
+}

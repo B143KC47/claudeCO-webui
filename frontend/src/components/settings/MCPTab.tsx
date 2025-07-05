@@ -140,7 +140,7 @@ export function MCPTab() {
   const [saving, setSaving] = useState(false);
   const [deletingServer, setDeletingServer] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<MCPServer | null>(null);
-  
+
   // 防抖相关
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
   const lastRefreshRef = useRef<number>(0);
@@ -149,7 +149,7 @@ export function MCPTab() {
   const debouncedRefresh = useCallback(() => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshRef.current;
-    
+
     // 如果距离上次刷新不足1秒，则忽略
     if (timeSinceLastRefresh < 1000) {
       return;
@@ -169,17 +169,14 @@ export function MCPTab() {
     // 组件挂载时，尝试从缓存加载数据
     const cachedData = mcpCache.getMCPData();
     const cachedCategories = mcpCache.getCategories();
-    
+
     if (cachedData && cachedCategories.length > 0) {
       setMcpData(cachedData);
       setCategories(["所有", ...cachedCategories]);
       setLoading(false);
     } else {
       // 并行加载数据
-      Promise.all([
-        loadMCPData(),
-        loadCategories()
-      ]).finally(() => {
+      Promise.all([loadMCPData(), loadCategories()]).finally(() => {
         setLoading(false);
       });
     }
@@ -246,9 +243,19 @@ export function MCPTab() {
       case "stopped":
         return <StopIcon className="h-4 w-4 text-tertiary" />;
       case "error":
-        return <XCircleIcon className="h-4 w-4" style={{ color: 'var(--accent-secondary)' }} />;
+        return (
+          <XCircleIcon
+            className="h-4 w-4"
+            style={{ color: "var(--accent-secondary)" }}
+          />
+        );
       default:
-        return <XCircleIcon className="h-4 w-4" style={{ color: 'var(--accent-tertiary)' }} />;
+        return (
+          <XCircleIcon
+            className="h-4 w-4"
+            style={{ color: "var(--accent-tertiary)" }}
+          />
+        );
     }
   };
 
@@ -343,15 +350,15 @@ export function MCPTab() {
 
       if (response.ok) {
         // 乐观更新：立即从UI中移除服务器
-        setMcpData(prev => {
+        setMcpData((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
-            servers: prev.servers.filter(s => s.name !== deleteConfirm.name)
+            servers: prev.servers.filter((s) => s.name !== deleteConfirm.name),
           };
         });
         setDeleteConfirm(null);
-        
+
         // 后台重新加载数据以确保一致性
         setTimeout(() => loadMCPData(true), 500);
       } else {
@@ -405,9 +412,15 @@ export function MCPTab() {
             </h3>
             <p className="text-secondary mb-6">
               确定要删除服务器 "
-              <span className="font-medium text-accent">{deleteConfirm.name}</span>" 吗？
+              <span className="font-medium text-accent">
+                {deleteConfirm.name}
+              </span>
+              " 吗？
               <br />
-              <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>
+              <span
+                className="text-sm"
+                style={{ color: "var(--accent-secondary)" }}
+              >
                 此操作不可撤销，将执行 claude mcp remove 命令。
               </span>
             </p>
@@ -440,9 +453,7 @@ export function MCPTab() {
 
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-primary">
-          MCP 服务器管理
-        </h2>
+        <h2 className="text-xl font-semibold text-primary">MCP 服务器管理</h2>
         <button
           onClick={handleRefresh}
           className="px-3 py-1 text-sm glass-button text-primary smooth-transition disabled:opacity-50"
@@ -455,16 +466,18 @@ export function MCPTab() {
       {/* Category Filter */}
       <div className="flex items-center space-x-2">
         <FunnelIcon className="h-4 w-4 text-tertiary" />
-        <span className="text-sm text-secondary">
-          分类筛选:
-        </span>
+        <span className="text-sm text-secondary">分类筛选:</span>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           className="px-2 py-1 text-sm glass-input text-primary focus:border-accent smooth-transition"
         >
           {categories.map((category) => (
-            <option key={category} value={category} className="bg-black-primary text-primary">
+            <option
+              key={category}
+              value={category}
+              className="bg-black-primary text-primary"
+            >
               {category}
             </option>
           ))}
@@ -515,10 +528,7 @@ export function MCPTab() {
         ) : (
           <div className="space-y-3">
             {filteredServers.map((server) => (
-              <div
-                key={server.name}
-                className="glass-card p-4"
-              >
+              <div key={server.name} className="glass-card p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
@@ -566,7 +576,11 @@ export function MCPTab() {
                             {categories
                               .filter((cat) => cat !== "所有")
                               .map((category) => (
-                                <option key={category} value={category} className="bg-black-primary text-primary">
+                                <option
+                                  key={category}
+                                  value={category}
+                                  className="bg-black-primary text-primary"
+                                >
                                   {category}
                                 </option>
                               ))}
@@ -639,9 +653,7 @@ export function MCPTab() {
 
       {/* Configuration Help */}
       <div className="glass-card p-4">
-        <h4 className="font-medium text-primary mb-2">
-          配置帮助
-        </h4>
+        <h4 className="font-medium text-primary mb-2">配置帮助</h4>
         <div className="text-sm text-secondary space-y-1">
           <p>
             • 使用{" "}

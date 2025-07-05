@@ -1,7 +1,10 @@
 import { useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import type { AllMessage } from "../types";
-import { sessionStorage, type SessionMetadata } from "../services/sessionStorage";
+import {
+  sessionStorage,
+  type SessionMetadata,
+} from "../services/sessionStorage";
 import { generateId } from "../utils/id";
 
 interface UseSessionPersistenceProps {
@@ -24,51 +27,39 @@ export function useSessionPersistence({
   // Generate session title from first user message
   const generateSessionTitle = useCallback((messages: AllMessage[]): string => {
     const firstUserMessage = messages.find(
-      (m) => m.type === "chat" && m.role === "user"
+      (m) => m.type === "chat" && m.role === "user",
     );
-    
+
     if (firstUserMessage && firstUserMessage.type === "chat") {
       const content = firstUserMessage.content;
       // Extract first line or up to 50 characters
       const firstLine = content.split("\n")[0];
-      return firstLine.length > 50 
-        ? firstLine.substring(0, 47) + "..." 
+      return firstLine.length > 50
+        ? firstLine.substring(0, 47) + "..."
         : firstLine;
     }
-    
+
     return `Session ${new Date().toLocaleString()}`;
   }, []);
 
-  // Create new session
+  // Create new session (but don't save it until there are messages)
   const createNewSession = useCallback(async (): Promise<string> => {
     const newSessionId = generateId();
-    const metadata: SessionMetadata = {
-      sessionId: newSessionId,
-      projectPath: workingDirectory || "default",
-      title: "New Session",
-      createdAt: Date.now(),
-      lastUpdated: Date.now(),
-      messageCount: 0,
-    };
-
-    await sessionStorage.saveSession({
-      metadata,
-      messages: [],
-    });
-
+    console.log("[Session] Creating new session with ID:", newSessionId);
+    // Don't save to storage yet - wait until first message
     return newSessionId;
-  }, [workingDirectory]);
+  }, []);
 
   // Save current session
   const saveSession = useCallback(async () => {
     if (!currentSessionId || messages.length === 0) return;
-    
+
     // Don't save if no new messages
     if (messages.length === lastSavedMessagesRef.current) return;
 
     try {
       const existingSession = await sessionStorage.getSession(currentSessionId);
-      
+
       const metadata: SessionMetadata = existingSession?.metadata || {
         sessionId: currentSessionId,
         projectPath: workingDirectory || "default",
@@ -78,8 +69,12 @@ export function useSessionPersistence({
         messageCount: messages.length,
       };
 
-      // Update title if it's still "New Session" and we have messages
-      if (metadata.title === "New Session" && messages.length > 0) {
+      // Update metadata
+      metadata.lastUpdated = Date.now();
+      metadata.messageCount = messages.length;
+
+      // Update title if we haven't set it properly yet
+      if (!existingSession || metadata.title === "New Session") {
         metadata.title = generateSessionTitle(messages);
       }
 
@@ -134,29 +129,34 @@ export function useSessionPersistence({
           },
           messages,
         };
-        
+
         // Use sendBeacon for reliable save on page unload
-        const blob = new Blob([JSON.stringify(session)], { type: "application/json" });
+        const blob = new Blob([JSON.stringify(session)], {
+          type: "application/json",
+        });
         navigator.sendBeacon(`/api/sessions/${currentSessionId}/save`, blob);
       }
     };
   }, [currentSessionId, messages, workingDirectory, generateSessionTitle]);
 
   // Load session from URL params
-  const loadSession = useCallback(async (sessionId: string): Promise<AllMessage[]> => {
-    try {
-      const session = await sessionStorage.getSession(sessionId);
-      if (session) {
-        lastSavedMessagesRef.current = session.messages.length;
-        return session.messages;
+  const loadSession = useCallback(
+    async (sessionId: string): Promise<AllMessage[]> => {
+      try {
+        const session = await sessionStorage.getSession(sessionId);
+        if (session) {
+          lastSavedMessagesRef.current = session.messages.length;
+          return session.messages;
+        }
+      } catch (error) {
+        console.error("Failed to load session:", error);
       }
-    } catch (error) {
-      console.error("Failed to load session:", error);
-    }
-    return [];
-  }, []);
+      return [];
+    },
+    [],
+  );
 
-  // Initialize session on mount
+  // Initialize session on mount (only load existing, don't create new)
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const urlSessionId = searchParams.get("sessionId");
@@ -169,13 +169,9 @@ export function useSessionPersistence({
           // Parent component should handle setting messages
         }
       });
-    } else if (!currentSessionId && !urlSessionId) {
-      // Create new session if none exists
-      createNewSession().then((newSessionId) => {
-        onSessionIdChange(newSessionId);
-      });
     }
-  }, [location.search, currentSessionId, onSessionIdChange, loadSession, createNewSession]);
+    // Don't create new session automatically - wait for first message
+  }, [location.search, currentSessionId, onSessionIdChange, loadSession]);
 
   return {
     saveSession,

@@ -9,7 +9,11 @@ import {
   HomeIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import type { FileItem, ListFilesRequest, ListFilesResponse } from "../../types";
+import type {
+  FileItem,
+  ListFilesRequest,
+  ListFilesResponse,
+} from "../../types";
 
 interface FileNode extends FileItem {
   children?: FileNode[];
@@ -34,10 +38,13 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log("[Explorer] Loading files for path:", path);
-      console.log("[Explorer] Current workingDirectory prop:", workingDirectory);
-      
+      console.log(
+        "[Explorer] Current workingDirectory prop:",
+        workingDirectory,
+      );
+
       const request: ListFilesRequest = { path };
       const response = await fetch("/api/files/list", {
         method: "POST",
@@ -52,17 +59,21 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("[Explorer] API error response:", errorData);
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(
+          errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        );
       }
 
       const data: ListFilesResponse = await response.json();
       console.log("[Explorer] API response data:", data);
 
       // Convert FileItem[] to FileNode[] for the tree structure
-      const nodes: FileNode[] = data.files.map(file => ({
+      const nodes: FileNode[] = data.files.map((file) => ({
         ...file,
         isExpanded: false,
-        lastModified: file.lastModified ? new Date(file.lastModified) : undefined,
+        lastModified: file.lastModified
+          ? new Date(file.lastModified)
+          : undefined,
       }));
 
       console.log("[Explorer] Converted to file nodes:", nodes.length, "items");
@@ -86,9 +97,12 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
   useEffect(() => {
     console.log("[Explorer] workingDirectory prop changed:", workingDirectory);
     console.log("[Explorer] currentPath state:", currentPath);
-    
+
     if (workingDirectory && workingDirectory !== currentPath) {
-      console.log("[Explorer] Updating to new working directory:", workingDirectory);
+      console.log(
+        "[Explorer] Updating to new working directory:",
+        workingDirectory,
+      );
       setCurrentPath(workingDirectory);
       loadFiles(workingDirectory);
     }
@@ -101,12 +115,12 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           // If expanding and no children loaded yet, we'll load them
           const wasExpanded = node.isExpanded;
           const newNode = { ...node, isExpanded: !node.isExpanded };
-          
+
           // Load children when expanding for the first time
           if (!wasExpanded && !node.children) {
             loadFolderChildren(path, newNode);
           }
-          
+
           return newNode;
         }
         if (node.children) {
@@ -119,11 +133,14 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
     setFileTree(updateNode(fileTree));
   };
 
-  const loadFolderChildren = async (folderPath: string, parentNode: FileNode) => {
+  const loadFolderChildren = async (
+    folderPath: string,
+    parentNode: FileNode,
+  ) => {
     try {
       console.log("[Explorer] Loading children for folder:", folderPath);
       console.log("[Explorer] Parent node:", parentNode.name);
-      
+
       const request: ListFilesRequest = { path: folderPath };
       const response = await fetch("/api/files/list", {
         method: "POST",
@@ -133,31 +150,48 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
         body: JSON.stringify(request),
       });
 
-      console.log("[Explorer] Folder children API response status:", response.status);
+      console.log(
+        "[Explorer] Folder children API response status:",
+        response.status,
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.warn(`[Explorer] Failed to load children for ${folderPath}:`, errorData);
+        console.warn(
+          `[Explorer] Failed to load children for ${folderPath}:`,
+          errorData,
+        );
         return;
       }
 
       const data: ListFilesResponse = await response.json();
       console.log("[Explorer] Folder children API response:", data);
-      
+
       // Convert to FileNode format
-      const children: FileNode[] = data.files.map(file => ({
+      const children: FileNode[] = data.files.map((file) => ({
         ...file,
         isExpanded: false,
-        lastModified: file.lastModified ? new Date(file.lastModified) : undefined,
+        lastModified: file.lastModified
+          ? new Date(file.lastModified)
+          : undefined,
       }));
 
-      console.log("[Explorer] Converted folder children:", children.length, "items");
+      console.log(
+        "[Explorer] Converted folder children:",
+        children.length,
+        "items",
+      );
 
       // Update the tree with the loaded children
       const updateWithChildren = (nodes: FileNode[]): FileNode[] => {
         return nodes.map((node) => {
           if (node.path === folderPath) {
-            console.log("[Explorer] Updating node with children:", node.name, children.length, "children");
+            console.log(
+              "[Explorer] Updating node with children:",
+              node.name,
+              children.length,
+              "children",
+            );
             return { ...node, children };
           }
           if (node.children) {
@@ -169,7 +203,10 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
 
       setFileTree(updateWithChildren);
     } catch (error) {
-      console.error(`[Explorer] Failed to load children for ${folderPath}:`, error);
+      console.error(
+        `[Explorer] Failed to load children for ${folderPath}:`,
+        error,
+      );
     }
   };
 
@@ -336,7 +373,8 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
           {currentPath !== "/" && currentPath !== "~" && (
             <button
               onClick={() => {
-                const parentPath = currentPath.split("/").slice(0, -1).join("/") || "/";
+                const parentPath =
+                  currentPath.split("/").slice(0, -1).join("/") || "/";
                 setCurrentPath(parentPath);
                 setSelectedFile(null);
                 loadFiles(parentPath);
@@ -348,7 +386,7 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
               <ChevronRightIcon className="w-4 h-4 text-accent rotate-180" />
             </button>
           )}
-          
+
           {/* Home Button */}
           <button
             onClick={goHome}

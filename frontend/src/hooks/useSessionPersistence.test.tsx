@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { useSessionPersistence } from "./useSessionPersistence";
 import { sessionStorage } from "../services/sessionStorage";
@@ -10,18 +11,19 @@ vi.mock("../services/sessionStorage", () => ({
   sessionStorage: {
     saveSession: vi.fn(),
     getSession: vi.fn(),
-    createNewSession: vi.fn()
-  }
+    createNewSession: vi.fn(),
+  },
 }));
 
-// Mock useLocation
+// Mock useLocation with configurable return value
+let mockLocationSearch = "?sessionId=test-session-123";
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useLocation: () => ({
-      search: "?sessionId=test-session-123"
-    })
+      search: mockLocationSearch,
+    }),
   };
 });
 
@@ -34,14 +36,14 @@ describe("useSessionPersistence", () => {
       type: "chat",
       role: "user",
       content: "Hello, Claude!",
-      timestamp: Date.now()
+      timestamp: Date.now(),
     },
     {
       type: "chat",
       role: "assistant",
       content: "Hello! How can I help you?",
-      timestamp: Date.now()
-    }
+      timestamp: Date.now(),
+    },
   ];
 
   const mockOnSessionIdChange = vi.fn();
@@ -49,6 +51,8 @@ describe("useSessionPersistence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    // Reset mock location search to default
+    mockLocationSearch = "?sessionId=test-session-123";
   });
 
   afterEach(() => {
@@ -66,9 +70,9 @@ describe("useSessionPersistence", () => {
           messages: mockMessages,
           currentSessionId: "test-session-123",
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     // Wait for debounce
@@ -81,9 +85,9 @@ describe("useSessionPersistence", () => {
         metadata: expect.objectContaining({
           sessionId: "test-session-123",
           projectPath: "/test/project",
-          messageCount: 2
+          messageCount: 2,
         }),
-        messages: mockMessages
+        messages: mockMessages,
       });
     });
   });
@@ -96,9 +100,9 @@ describe("useSessionPersistence", () => {
         title: "Test Session",
         createdAt: Date.now(),
         lastUpdated: Date.now(),
-        messageCount: 2
+        messageCount: 2,
       },
-      messages: mockMessages
+      messages: mockMessages,
     };
 
     vi.mocked(sessionStorage.getSession).mockResolvedValue(mockStoredSession);
@@ -109,9 +113,9 @@ describe("useSessionPersistence", () => {
           messages: [],
           currentSessionId: null,
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     const loadedMessages = await result.current.loadSession("test-session-123");
@@ -122,11 +126,9 @@ describe("useSessionPersistence", () => {
 
   it("should create new session if none exists", async () => {
     const newSessionId = "new-session-456";
-    
+
     // Mock empty location search
-    vi.mocked(useLocation as any).mockReturnValue({
-      search: ""
-    });
+    mockLocationSearch = "";
 
     vi.mocked(sessionStorage.saveSession).mockResolvedValue(undefined);
 
@@ -136,9 +138,9 @@ describe("useSessionPersistence", () => {
           messages: [],
           currentSessionId: null,
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     const createdId = await result.current.createNewSession();
@@ -147,9 +149,9 @@ describe("useSessionPersistence", () => {
       metadata: expect.objectContaining({
         projectPath: "/test/project",
         title: "New Session",
-        messageCount: 0
+        messageCount: 0,
       }),
-      messages: []
+      messages: [],
     });
   });
 
@@ -158,14 +160,14 @@ describe("useSessionPersistence", () => {
       {
         type: "system",
         subtype: "init",
-        timestamp: Date.now()
+        timestamp: Date.now(),
       } as any,
       {
         type: "chat",
         role: "user",
         content: "How do I implement a binary search tree in Python?",
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     ];
 
     const { result } = renderHook(
@@ -174,9 +176,9 @@ describe("useSessionPersistence", () => {
           messages: messagesWithContent,
           currentSessionId: "test-session-123",
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     // Wait for debounce
@@ -187,22 +189,23 @@ describe("useSessionPersistence", () => {
     await waitFor(() => {
       expect(sessionStorage.saveSession).toHaveBeenCalledWith({
         metadata: expect.objectContaining({
-          title: "How do I implement a binary search tree in Python?"
+          title: "How do I implement a binary search tree in Python?",
         }),
-        messages: messagesWithContent
+        messages: messagesWithContent,
       });
     });
   });
 
   it("should truncate long titles", async () => {
-    const longMessage = "This is a very long message that exceeds fifty characters and should be truncated with ellipsis at the end";
+    const longMessage =
+      "This is a very long message that exceeds fifty characters and should be truncated with ellipsis at the end";
     const messagesWithLongContent: AllMessage[] = [
       {
         type: "chat",
         role: "user",
         content: longMessage,
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     ];
 
     const { result } = renderHook(
@@ -211,9 +214,9 @@ describe("useSessionPersistence", () => {
           messages: messagesWithLongContent,
           currentSessionId: "test-session-123",
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     // Wait for debounce
@@ -224,9 +227,9 @@ describe("useSessionPersistence", () => {
     await waitFor(() => {
       expect(sessionStorage.saveSession).toHaveBeenCalledWith({
         metadata: expect.objectContaining({
-          title: "This is a very long message that exceeds fifty..."
+          title: "This is a very long message that exceeds fifty...",
         }),
-        messages: messagesWithLongContent
+        messages: messagesWithLongContent,
       });
     });
   });
@@ -238,32 +241,29 @@ describe("useSessionPersistence", () => {
           messages: mockMessages,
           currentSessionId: "test-session-123",
           workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
+          onSessionIdChange: mockOnSessionIdChange,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     unmount();
 
     expect(global.navigator.sendBeacon).toHaveBeenCalledWith(
       "/api/sessions/test-session-123/save",
-      expect.any(Blob)
+      expect.any(Blob),
     );
   });
 
   it("should not save if no new messages", async () => {
-    const { rerender } = renderHook(
-      (props) => useSessionPersistence(props),
-      {
-        wrapper,
-        initialProps: {
-          messages: mockMessages,
-          currentSessionId: "test-session-123",
-          workingDirectory: "/test/project",
-          onSessionIdChange: mockOnSessionIdChange
-        }
-      }
-    );
+    const { rerender } = renderHook((props) => useSessionPersistence(props), {
+      wrapper,
+      initialProps: {
+        messages: mockMessages,
+        currentSessionId: "test-session-123",
+        workingDirectory: "/test/project",
+        onSessionIdChange: mockOnSessionIdChange,
+      },
+    });
 
     // First save
     act(() => {
@@ -279,7 +279,7 @@ describe("useSessionPersistence", () => {
       messages: mockMessages,
       currentSessionId: "test-session-123",
       workingDirectory: "/test/project",
-      onSessionIdChange: mockOnSessionIdChange
+      onSessionIdChange: mockOnSessionIdChange,
     });
 
     // Wait again

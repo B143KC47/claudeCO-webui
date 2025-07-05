@@ -1,17 +1,21 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { sessionStorage, type SessionMetadata, type StoredSession } from "./sessionStorage";
+import {
+  sessionStorage,
+  type SessionMetadata,
+  type StoredSession,
+} from "./sessionStorage";
 import type { AllMessage } from "../types";
 
 // Mock IndexedDB
 const mockDB = {
   transaction: vi.fn(),
   objectStoreNames: {
-    contains: vi.fn(() => false)
-  }
+    contains: vi.fn(() => false),
+  },
 };
 
 const mockTransaction = {
-  objectStore: vi.fn()
+  objectStore: vi.fn(),
 };
 
 const mockStore = {
@@ -21,11 +25,11 @@ const mockStore = {
   delete: vi.fn(),
   createIndex: vi.fn(),
   index: vi.fn(),
-  getAllKeys: vi.fn()
+  getAllKeys: vi.fn(),
 };
 
 const mockIndex = {
-  getAllKeys: vi.fn()
+  getAllKeys: vi.fn(),
 };
 
 // Setup IndexedDB mocks
@@ -35,8 +39,8 @@ global.indexedDB = {
     onerror: null,
     onupgradeneeded: null,
     result: mockDB,
-    error: null
-  }))
+    error: null,
+  })),
 } as any;
 
 describe("SessionStorageService", () => {
@@ -58,14 +62,14 @@ describe("SessionStorageService", () => {
           type: "chat",
           role: "user",
           content: "Hello, Claude!",
-          timestamp: Date.now() - 1000
+          timestamp: Date.now() - 1000,
         },
         {
           type: "chat",
           role: "assistant",
           content: "Hello! How can I help you today?",
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       ];
 
       const session: StoredSession = {
@@ -75,15 +79,15 @@ describe("SessionStorageService", () => {
           title: "Test Session",
           createdAt: Date.now() - 10000,
           lastUpdated: Date.now() - 5000,
-          messageCount: 0
+          messageCount: 0,
         },
-        messages
+        messages,
       };
 
       // Mock successful put operation
       mockStore.put.mockImplementation(() => ({
         onsuccess: null,
-        onerror: null
+        onerror: null,
       }));
 
       // Execute mock open success
@@ -93,7 +97,7 @@ describe("SessionStorageService", () => {
       }, 0);
 
       // Wait for initialization
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Mock put request
       mockStore.put.mockImplementation(() => {
@@ -112,9 +116,9 @@ describe("SessionStorageService", () => {
             sessionId: "test-session-123",
             messageCount: 2,
             firstMessage: "Hello, Claude!",
-            lastMessage: "Hello! How can I help you today?"
-          })
-        })
+            lastMessage: "Hello! How can I help you today?",
+          }),
+        }),
       );
     });
   });
@@ -128,17 +132,17 @@ describe("SessionStorageService", () => {
           title: "Test Session",
           createdAt: Date.now(),
           lastUpdated: Date.now(),
-          messageCount: 2
+          messageCount: 2,
         },
-        messages: []
+        messages: [],
       };
 
       // Mock successful get operation
       mockStore.get.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: mockSession
+          result: mockSession,
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));
@@ -152,7 +156,7 @@ describe("SessionStorageService", () => {
         if (openRequest.onsuccess) openRequest.onsuccess(new Event("success"));
       }, 0);
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const result = await sessionStorage.getSession("test-session-123");
 
@@ -162,10 +166,10 @@ describe("SessionStorageService", () => {
 
     it("should return null for non-existent session", async () => {
       mockStore.get.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: null
+          result: null,
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));
@@ -189,7 +193,7 @@ describe("SessionStorageService", () => {
           lastUpdated: Date.now(),
           messageCount: 5,
           firstMessage: "How do I test the Claude API?",
-          tags: ["api", "testing"]
+          tags: ["api", "testing"],
         },
         {
           sessionId: "2",
@@ -199,16 +203,16 @@ describe("SessionStorageService", () => {
           lastUpdated: Date.now(),
           messageCount: 3,
           firstMessage: "Help me build a React component",
-          tags: ["react", "frontend"]
-        }
+          tags: ["react", "frontend"],
+        },
       ];
 
       // Mock getAll for search
       mockStore.getAll.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: mockSessions.map(m => ({ metadata: m, messages: [] }))
+          result: mockSessions.map((m) => ({ metadata: m, messages: [] })),
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));
@@ -217,7 +221,7 @@ describe("SessionStorageService", () => {
       });
 
       const results = await sessionStorage.searchSessions("Claude");
-      
+
       expect(results).toHaveLength(1);
       expect(results[0].title).toBe("Testing Claude API");
     });
@@ -231,7 +235,7 @@ describe("SessionStorageService", () => {
           createdAt: Date.now(),
           lastUpdated: Date.now(),
           messageCount: 5,
-          tags: ["javascript", "testing"]
+          tags: ["javascript", "testing"],
         },
         {
           sessionId: "2",
@@ -240,15 +244,15 @@ describe("SessionStorageService", () => {
           createdAt: Date.now(),
           lastUpdated: Date.now(),
           messageCount: 3,
-          tags: ["python", "api"]
-        }
+          tags: ["python", "api"],
+        },
       ];
 
       mockStore.getAll.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: mockSessions.map(m => ({ metadata: m, messages: [] }))
+          result: mockSessions.map((m) => ({ metadata: m, messages: [] })),
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));
@@ -257,7 +261,7 @@ describe("SessionStorageService", () => {
       });
 
       const results = await sessionStorage.searchSessions("javascript");
-      
+
       expect(results).toHaveLength(1);
       expect(results[0].sessionId).toBe("1");
     });
@@ -272,21 +276,23 @@ describe("SessionStorageService", () => {
           title: "Export Test",
           createdAt: Date.now(),
           lastUpdated: Date.now(),
-          messageCount: 1
+          messageCount: 1,
         },
-        messages: [{
-          type: "chat",
-          role: "user",
-          content: "Test message",
-          timestamp: Date.now()
-        }]
+        messages: [
+          {
+            type: "chat",
+            role: "user",
+            content: "Test message",
+            timestamp: Date.now(),
+          },
+        ],
       };
 
       mockStore.get.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: mockSession
+          result: mockSession,
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));
@@ -311,9 +317,9 @@ describe("SessionStorageService", () => {
           title: "Original Session",
           createdAt: Date.now(),
           lastUpdated: Date.now(),
-          messageCount: 1
+          messageCount: 1,
         },
-        messages: []
+        messages: [],
       };
 
       mockStore.put.mockImplementation(() => {
@@ -324,15 +330,17 @@ describe("SessionStorageService", () => {
         return request;
       });
 
-      const newId = await sessionStorage.importSession(JSON.stringify(sessionToImport));
+      const newId = await sessionStorage.importSession(
+        JSON.stringify(sessionToImport),
+      );
 
       expect(newId).toContain("imported_");
       expect(mockStore.put).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            title: "[Imported] Original Session"
-          })
-        })
+            title: "[Imported] Original Session",
+          }),
+        }),
       );
     });
   });
@@ -345,11 +353,11 @@ describe("SessionStorageService", () => {
           sessionId: "old-session",
           projectPath: "/test",
           title: "Old Session",
-          createdAt: now - (35 * 24 * 60 * 60 * 1000), // 35 days ago
-          lastUpdated: now - (35 * 24 * 60 * 60 * 1000),
-          messageCount: 1
+          createdAt: now - 35 * 24 * 60 * 60 * 1000, // 35 days ago
+          lastUpdated: now - 35 * 24 * 60 * 60 * 1000,
+          messageCount: 1,
         },
-        messages: []
+        messages: [],
       };
 
       const recentSession = {
@@ -357,18 +365,18 @@ describe("SessionStorageService", () => {
           sessionId: "recent-session",
           projectPath: "/test",
           title: "Recent Session",
-          createdAt: now - (5 * 24 * 60 * 60 * 1000), // 5 days ago
-          lastUpdated: now - (5 * 24 * 60 * 60 * 1000),
-          messageCount: 1
+          createdAt: now - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+          lastUpdated: now - 5 * 24 * 60 * 60 * 1000,
+          messageCount: 1,
         },
-        messages: []
+        messages: [],
       };
 
       mockStore.getAll.mockImplementation(() => {
-        const request = { 
-          onsuccess: null, 
+        const request = {
+          onsuccess: null,
           onerror: null,
-          result: [oldSession, recentSession]
+          result: [oldSession, recentSession],
         };
         setTimeout(() => {
           if (request.onsuccess) request.onsuccess(new Event("success"));

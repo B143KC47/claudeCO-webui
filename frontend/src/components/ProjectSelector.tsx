@@ -30,12 +30,8 @@ export function ProjectSelector() {
         return `/${directoryName}`;
       }
 
-      const {
-        username,
-        homeDirectory,
-        currentWorkingDirectory,
-        isWSL,
-      } = systemInfo;
+      const { username, homeDirectory, currentWorkingDirectory, isWSL } =
+        systemInfo;
 
       let basePath = currentWorkingDirectory;
 

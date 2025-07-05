@@ -16,6 +16,7 @@ export interface StreamingContext {
   addMessage: (msg: AllMessage) => void;
   updateLastMessage: (content: string) => void;
   onSessionId?: (sessionId: string) => void;
+  sessionId?: string;
   shouldShowInitMessage?: () => boolean;
   onInitMessageShown?: () => void;
   hasReceivedInit?: boolean;

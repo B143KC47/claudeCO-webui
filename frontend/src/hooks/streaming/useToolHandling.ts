@@ -76,8 +76,13 @@ export function useToolHandling() {
         return;
       }
 
+      // Get the actual tool name from cache
+      const toolUseId = contentItem.tool_use_id || "";
+      const cachedToolInfo = toolUseCache.get(toolUseId);
+      const toolName = cachedToolInfo?.name || "Tool result";
+
       // This is a regular tool result - create a ToolResultMessage
-      const toolResultMessage = createToolResultMessage("Tool result", content);
+      const toolResultMessage = createToolResultMessage(toolName, content);
       context.addMessage(toolResultMessage);
     },
     [handlePermissionError],

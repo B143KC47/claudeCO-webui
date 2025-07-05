@@ -12,7 +12,11 @@ export async function handleSessionSave(c: Context) {
     const sessionData = await c.req.json();
 
     // Log the save attempt (in production, you might want to persist this)
-    console.log(`[Session] Saving session ${sessionId} with ${sessionData.messages?.length || 0} messages`);
+    console.log(
+      `[Session] Saving session ${sessionId} with ${
+        sessionData.messages?.length || 0
+      } messages`,
+    );
 
     // Since the frontend uses IndexedDB for storage, this endpoint
     // primarily serves as a fallback for sendBeacon on page unload

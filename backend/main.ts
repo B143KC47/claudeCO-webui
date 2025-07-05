@@ -21,7 +21,11 @@ import {
   handleTerminalShells,
 } from "./handlers/terminal.ts";
 import { handleFilesList } from "./handlers/files.ts";
-import { handleSessionSave, handleSessionGet, handleSessionDelete } from "./handlers/sessions.ts";
+import {
+  handleSessionDelete,
+  handleSessionGet,
+  handleSessionSave,
+} from "./handlers/sessions.ts";
 
 const args = await parseCliArgs();
 

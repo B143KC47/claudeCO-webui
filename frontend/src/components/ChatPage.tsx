@@ -131,6 +131,14 @@ export function ChatPage() {
       const content = messageContent || input.trim();
       if (!content || isLoading) return;
 
+      // Use existing session ID or let Claude SDK create one
+      const sessionId = currentSessionId;
+      if (!sessionId) {
+        console.log("[Session] No current session, will let Claude SDK create one");
+      } else {
+        console.log("[Session] Using existing session:", sessionId);
+      }
+
       const requestId = generateRequestId();
 
       // Only add user message to chat if not hidden
@@ -157,17 +165,21 @@ export function ChatPage() {
               }
             : undefined;
 
+        const requestBody = {
+          message: content,
+          requestId,
+          ...(sessionId ? { sessionId } : {}),
+          allowedTools: tools || allowedTools,
+          ...(workingDirectory ? { workingDirectory } : {}),
+          ...(thinkingConfig ? { thinking: thinkingConfig } : {}),
+        } as ChatRequest;
+        
+        console.log("[Session] Sending request with body:", requestBody);
+
         const response = await fetch(getChatUrl(), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: content,
-            requestId,
-            ...(currentSessionId ? { sessionId: currentSessionId } : {}),
-            allowedTools: tools || allowedTools,
-            ...(workingDirectory ? { workingDirectory } : {}),
-            ...(thinkingConfig ? { thinking: thinkingConfig } : {}),
-          } as ChatRequest),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.body) throw new Error("No response body");
@@ -184,7 +196,16 @@ export function ChatPage() {
           setCurrentAssistantMessage,
           addMessage,
           updateLastMessage,
-          onSessionId: setCurrentSessionId,
+          onSessionId: (newSessionId: string) => {
+            console.log("[Session] Received session ID from SDK:", newSessionId);
+            setCurrentSessionId(newSessionId);
+            
+            // Update URL with new session ID from SDK
+            const newSearchParams = new URLSearchParams(searchParams);
+            newSearchParams.set("sessionId", newSessionId);
+            setSearchParams(newSearchParams);
+          },
+          sessionId: currentSessionId,
           shouldShowInitMessage: () => !hasShownInitMessage,
           onInitMessageShown: () => setHasShownInitMessage(true),
           get hasReceivedInit() {
@@ -201,26 +222,55 @@ export function ChatPage() {
           },
         };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done || shouldAbort) break;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done || shouldAbort) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter((line) => line.trim());
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n").filter((line) => line.trim());
 
-          for (const line of lines) {
+            for (const line of lines) {
+              if (shouldAbort) break;
+              processStreamLine(line, streamingContext);
+            }
+
             if (shouldAbort) break;
-            processStreamLine(line, streamingContext);
           }
-
-          if (shouldAbort) break;
+        } catch (readError) {
+          // Handle read errors separately to catch connection issues
+          if (
+            readError instanceof TypeError &&
+            readError.message.includes("Failed to fetch")
+          ) {
+            console.error("Connection to backend lost");
+            addMessage({
+              type: "error",
+              subtype: "stream_error",
+              message:
+                "Connection to backend server lost. Please ensure the backend is running.",
+              timestamp: Date.now(),
+            });
+          } else {
+            throw readError;
+          }
         }
       } catch (error) {
+        // Suppress Chrome extension errors
+        if (
+          error instanceof Error &&
+          error.message.includes("message port closed")
+        ) {
+          console.warn("Chrome extension communication error (ignored)");
+          return;
+        }
+
         console.error("Failed to send message:", error);
         addMessage({
           type: "chat",
           role: "assistant",
-          content: "Error: Failed to get response",
+          content:
+            "Error: Failed to get response. Please check if the backend server is running.",
           timestamp: Date.now(),
         });
       } finally {
@@ -249,6 +299,9 @@ export function ChatPage() {
       processStreamLine,
       handlePermissionError,
       createAbortHandler,
+      createNewSession,
+      searchParams,
+      setSearchParams,
     ],
   );
 
@@ -263,12 +316,10 @@ export function ChatPage() {
     const pattern = permissionDialog.pattern;
     closePermissionDialog();
 
-    if (currentSessionId) {
-      sendMessage("continue", allowToolTemporary(pattern), true);
-    }
+    // Send continue message with allowed tools
+    sendMessage("continue", allowToolTemporary(pattern), true);
   }, [
     permissionDialog,
-    currentSessionId,
     sendMessage,
     allowToolTemporary,
     closePermissionDialog,
@@ -281,12 +332,10 @@ export function ChatPage() {
     const updatedAllowedTools = allowToolPermanent(pattern);
     closePermissionDialog();
 
-    if (currentSessionId) {
-      sendMessage("continue", updatedAllowedTools, true);
-    }
+    // Send continue message with updated allowed tools
+    sendMessage("continue", updatedAllowedTools, true);
   }, [
     permissionDialog,
-    currentSessionId,
     sendMessage,
     allowToolPermanent,
     closePermissionDialog,
@@ -305,37 +354,54 @@ export function ChatPage() {
   }, [navigate]);
 
   // Session management handlers
-  const handleSessionSelect = useCallback(async (sessionId: string) => {
-    const loadedMessages = await loadSession(sessionId);
-    if (loadedMessages.length > 0) {
-      setMessages(loadedMessages);
-      setCurrentSessionId(sessionId);
-      
-      // Update URL with selected session
-      const newSearchParams = new URLSearchParams(searchParams);
-      newSearchParams.set("sessionId", sessionId);
-      setSearchParams(newSearchParams);
-    }
-    setShowSessionManager(false);
-  }, [loadSession, setMessages, setCurrentSessionId, searchParams, setSearchParams]);
+  const handleSessionSelect = useCallback(
+    async (sessionId: string) => {
+      const loadedMessages = await loadSession(sessionId);
+      if (loadedMessages.length > 0) {
+        setMessages(loadedMessages);
+        setCurrentSessionId(sessionId);
+
+        // Update URL with selected session
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.set("sessionId", sessionId);
+        setSearchParams(newSearchParams);
+      }
+      setShowSessionManager(false);
+    },
+    [
+      loadSession,
+      setMessages,
+      setCurrentSessionId,
+      searchParams,
+      setSearchParams,
+    ],
+  );
 
   const handleSessionCreate = useCallback(async () => {
     // Clear current session
     setMessages([]);
     setHasShownInitMessage(false);
     setHasReceivedInit(false);
-    
+
     // Create new session
     const newSessionId = await createNewSession();
     setCurrentSessionId(newSessionId);
-    
+
     // Update URL
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.set("sessionId", newSessionId);
     setSearchParams(newSearchParams);
-    
+
     setShowSessionManager(false);
-  }, [createNewSession, setMessages, setCurrentSessionId, setHasShownInitMessage, setHasReceivedInit, searchParams, setSearchParams]);
+  }, [
+    createNewSession,
+    setMessages,
+    setCurrentSessionId,
+    setHasShownInitMessage,
+    setHasReceivedInit,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // Load session from URL on mount
   useEffect(() => {

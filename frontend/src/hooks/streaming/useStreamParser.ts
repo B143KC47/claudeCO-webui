@@ -155,13 +155,9 @@ export function useStreamParser() {
 
   const processClaudeData = useCallback(
     (claudeData: SDKMessage, context: StreamingContext) => {
-      // Update sessionId only for the first assistant message after init
-      if (
-        claudeData.type === "assistant" &&
-        context.hasReceivedInit &&
-        claudeData.session_id &&
-        context.onSessionId
-      ) {
+      // Extract session ID from any message that has it
+      if (claudeData.session_id && context.onSessionId && !context.sessionId) {
+        console.log(`[Session] Extracting session ID from ${claudeData.type} message:`, claudeData.session_id);
         context.onSessionId(claudeData.session_id);
       }
 
@@ -223,6 +219,11 @@ export function useStreamParser() {
             timestamp: Date.now(),
           };
           context.addMessage(errorMessage);
+
+          // If error indicates Claude Code exit, provide more context
+          if (data.error && data.error.includes("Claude Code process exited")) {
+            console.error("Claude Code process terminated unexpectedly");
+          }
         } else if (data.type === "aborted") {
           const abortedMessage: AbortMessage = {
             type: "system",
@@ -235,6 +236,19 @@ export function useStreamParser() {
         }
       } catch (parseError) {
         console.error("Failed to parse stream line:", parseError);
+        console.error("Raw line:", line);
+
+        // Only show parse error if it's not an empty line or connection close
+        if (line.trim() && !line.includes("event: close")) {
+          const errorMessage: SystemMessage = {
+            type: "error",
+            subtype: "stream_error",
+            message:
+              "Failed to parse response from Claude. The connection may have been interrupted.",
+            timestamp: Date.now(),
+          };
+          context.addMessage(errorMessage);
+        }
       }
     },
     [processClaudeData],

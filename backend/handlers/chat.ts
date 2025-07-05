@@ -76,16 +76,40 @@ async function* executeClaudeCommand(
     }
 
     // For compiled binaries, use system claude command to avoid bundled cli.js issues
-    let claudePath: string;
+    let claudePath: string = "claude"; // default fallback
     try {
       const whichResult = await new Deno.Command("which", {
         args: ["claude"],
         stdout: "piped",
+        stderr: "piped",
       }).output();
-      claudePath = new TextDecoder().decode(whichResult.stdout).trim();
-    } catch {
-      claudePath = "claude"; // fallback
+      
+      if (whichResult.success) {
+        claudePath = new TextDecoder().decode(whichResult.stdout).trim();
+        console.log("[Chat] Found Claude at:", claudePath);
+
+        // Try to get version info (non-blocking)
+        const versionCheck = await new Deno.Command(claudePath, {
+          args: ["--version"],
+          stdout: "piped",
+          stderr: "piped",
+        }).output();
+
+        if (versionCheck.success) {
+          const version = new TextDecoder().decode(versionCheck.stdout).trim();
+          console.log("[Chat] Claude version:", version);
+        }
+      } else {
+        console.log("[Chat] Using default 'claude' command");
+      }
+    } catch (error) {
+      console.log("[Chat] Claude detection warning:", error.message);
+      // Continue with default claude command
     }
+
+    console.log(
+      `[Chat] Starting Claude query with session: ${sessionId || "new"}`,
+    );
 
     for await (
       const sdkMessage of query({
@@ -106,6 +130,11 @@ async function* executeClaudeCommand(
         console.debug(JSON.stringify(sdkMessage, null, 2));
         console.debug("---");
       }
+      
+      // Log session ID extraction for debugging
+      if (sdkMessage.session_id) {
+        console.log(`[Session] SDK Message type: ${sdkMessage.type}, session_id: ${sdkMessage.session_id}`);
+      }
 
       yield {
         type: "claude_json",
@@ -113,16 +142,89 @@ async function* executeClaudeCommand(
       };
     }
 
+    console.log("[Chat] Claude query completed successfully");
+
     yield { type: "done" };
   } catch (error) {
     // Check if error is due to abort
     if (error instanceof AbortError) {
       yield { type: "aborted" };
     } else {
-      yield {
-        type: "error",
-        error: error instanceof Error ? error.message : String(error),
-      };
+      // Handle Claude Code exit code 1 specifically
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+
+      // Check for common Claude Code exit scenarios
+      if (
+        errorMessage.includes("exit code 1") ||
+        errorMessage.includes("exited with code 1")
+      ) {
+        console.error("[Chat] Claude Code process exited with code 1");
+        console.error("[Chat] Full error:", error);
+        console.error("[Chat] Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+
+        // Try to extract more specific error information
+        let specificError = "Claude Code process exited unexpectedly.";
+        let solutions = [];
+
+        if (errorMessage.includes("ANTHROPIC_API_KEY")) {
+          specificError = "Claude Code API key is not configured.";
+          solutions = [
+            "• Set your API key with: export ANTHROPIC_API_KEY='your-key'",
+            "• Or use Claude Code Max which doesn't require an API key"
+          ];
+        } else if (errorMessage.includes("rate limit")) {
+          specificError = "Claude API rate limit exceeded.";
+          solutions = [
+            "• Wait a few minutes before trying again",
+            "• Check your usage at anthropic.com"
+          ];
+        } else if (
+          errorMessage.includes("authentication") ||
+          errorMessage.includes("401")
+        ) {
+          specificError = "Claude API authentication failed.";
+          solutions = [
+            "• Verify your API key is correct",
+            "• Check if your API key has expired"
+          ];
+        } else if (errorMessage.includes("quota")) {
+          specificError = "Claude API quota exceeded.";
+          solutions = [
+            "• Check your usage limits at anthropic.com",
+            "• Upgrade your plan if needed"
+          ];
+        } else if (errorMessage.includes("Invalid request")) {
+          specificError = "Invalid request sent to Claude.";
+          solutions = [
+            "• Check if the message format is correct",
+            "• Try a simpler message to test"
+          ];
+        } else {
+          // Generic error - check Claude authentication status
+          solutions = [
+            "• Run 'claude --version' to check Claude is working",
+            "• For Claude Code Max users: ensure you're logged in with 'claude login'",
+            "• For API users: ensure ANTHROPIC_API_KEY is set",
+            "• Check the backend logs for more details"
+          ];
+        }
+
+        yield {
+          type: "error",
+          error: `${specificError}\n\n` +
+            "Possible solutions:\n" +
+            solutions.join("\n") +
+            "\n\nDebug info: " + errorMessage.substring(0, 300),
+        };
+      } else {
+        console.error("[Chat] Claude query error:", error);
+        yield {
+          type: "error",
+          error: errorMessage,
+        };
+      }
     }
   } finally {
     // Clean up AbortController from map

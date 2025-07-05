@@ -347,7 +347,11 @@ body {
   right: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(168, 85, 247, 0.1) 0%,
+    transparent 70%
+  );
   animation: rotate-gradient 20s linear infinite;
 }
 
@@ -362,14 +366,13 @@ body {
 }
 
 .tool-message-thinking {
-  background-image: 
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 10px,
-      rgba(59, 130, 246, 0.03) 10px,
-      rgba(59, 130, 246, 0.03) 20px
-    );
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(59, 130, 246, 0.03) 10px,
+    rgba(59, 130, 246, 0.03) 20px
+  );
 }
 
 .tool-message-write::after {
@@ -420,7 +423,12 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
   animation: shimmer 3s infinite;
 }
 
@@ -450,7 +458,9 @@ body {
 }
 
 @keyframes thinking-pulse {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
@@ -463,11 +473,15 @@ body {
 /* Enhanced collapsible details for tool results */
 .tool-result-details {
   position: relative;
-  background: linear-gradient(135deg, var(--glass-bg) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--glass-bg) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
