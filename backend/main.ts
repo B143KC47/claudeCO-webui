@@ -20,6 +20,7 @@ import {
   handleTerminalInfo,
   handleTerminalShells,
 } from "./handlers/terminal.ts";
+import { handleFilesList } from "./handlers/files.ts";
 
 const args = await parseCliArgs();
 
@@ -113,6 +114,9 @@ app.get("/api/terminal/shells", (c) => handleTerminalShells(c));
 app.get("/api/terminal/info", (c) => handleTerminalInfo(c));
 
 app.post("/api/terminal/validate-path", (c) => handlePathValidation(c));
+
+// Files API routes
+app.post("/api/files/list", (c) => handleFilesList(c));
 
 // Static file serving with SPA fallback
 // Resolve dist directory path relative to this module

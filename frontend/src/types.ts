@@ -130,6 +130,26 @@ export function isToolResultMessage(
   return message.type === "tool_result";
 }
 
+// File system types
+export interface FileItem {
+  name: string;
+  type: "file" | "folder";
+  path: string;
+  size?: number;
+  lastModified?: string;
+  permissions?: string;
+}
+
+export interface ListFilesRequest {
+  path: string;
+}
+
+export interface ListFilesResponse {
+  files: FileItem[];
+  currentPath: string;
+  parentPath?: string;
+}
+
 // Re-export shared types
 export type {
   StreamResponse,

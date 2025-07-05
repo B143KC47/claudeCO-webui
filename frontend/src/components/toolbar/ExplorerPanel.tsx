@@ -7,15 +7,13 @@ import {
   ChevronDownIcon,
   MagnifyingGlassIcon,
   HomeIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import type { FileItem, ListFilesRequest, ListFilesResponse } from "../../types";
 
-interface FileNode {
-  name: string;
-  type: "file" | "folder";
-  path: string;
+interface FileNode extends FileItem {
   children?: FileNode[];
   isExpanded?: boolean;
-  size?: number;
   lastModified?: Date;
 }
 
@@ -28,101 +26,88 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock file system data
-  const mockFileSystem: FileNode[] = [
-    {
-      name: "src",
-      type: "folder",
-      path: "/src",
-      isExpanded: true,
-      children: [
-        {
-          name: "components",
-          type: "folder",
-          path: "/src/components",
-          isExpanded: false,
-          children: [
-            {
-              name: "App.tsx",
-              type: "file",
-              path: "/src/components/App.tsx",
-              size: 1024,
-            },
-            {
-              name: "Button.tsx",
-              type: "file",
-              path: "/src/components/Button.tsx",
-              size: 512,
-            },
-            {
-              name: "Modal.tsx",
-              type: "file",
-              path: "/src/components/Modal.tsx",
-              size: 768,
-            },
-          ],
+  // Load files from the current directory
+  const loadFiles = async (path: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("[Explorer] Loading files for path:", path);
+      console.log("[Explorer] Current workingDirectory prop:", workingDirectory);
+      
+      const request: ListFilesRequest = { path };
+      const response = await fetch("/api/files/list", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          name: "hooks",
-          type: "folder",
-          path: "/src/hooks",
-          isExpanded: false,
-          children: [
-            {
-              name: "useAuth.ts",
-              type: "file",
-              path: "/src/hooks/useAuth.ts",
-              size: 256,
-            },
-            {
-              name: "useTheme.ts",
-              type: "file",
-              path: "/src/hooks/useTheme.ts",
-              size: 384,
-            },
-          ],
-        },
-        { name: "main.tsx", type: "file", path: "/src/main.tsx", size: 512 },
-        { name: "index.css", type: "file", path: "/src/index.css", size: 2048 },
-      ],
-    },
-    {
-      name: "public",
-      type: "folder",
-      path: "/public",
-      isExpanded: false,
-      children: [
-        {
-          name: "index.html",
-          type: "file",
-          path: "/public/index.html",
-          size: 1024,
-        },
-        {
-          name: "favicon.ico",
-          type: "file",
-          path: "/public/favicon.ico",
-          size: 128,
-        },
-      ],
-    },
-    { name: "package.json", type: "file", path: "/package.json", size: 1536 },
-    { name: "README.md", type: "file", path: "/README.md", size: 4096 },
-    { name: "tsconfig.json", type: "file", path: "/tsconfig.json", size: 512 },
-    { name: ".gitignore", type: "file", path: "/.gitignore", size: 256 },
-  ];
+        body: JSON.stringify(request),
+      });
+
+      console.log("[Explorer] API response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[Explorer] API error response:", errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: ListFilesResponse = await response.json();
+      console.log("[Explorer] API response data:", data);
+
+      // Convert FileItem[] to FileNode[] for the tree structure
+      const nodes: FileNode[] = data.files.map(file => ({
+        ...file,
+        isExpanded: false,
+        lastModified: file.lastModified ? new Date(file.lastModified) : undefined,
+      }));
+
+      console.log("[Explorer] Converted to file nodes:", nodes.length, "items");
+      setFileTree(nodes);
+      setCurrentPath(data.currentPath);
+    } catch (err) {
+      console.error("[Explorer] Failed to load files:", err);
+      setError(err instanceof Error ? err.message : "Failed to load files");
+      setFileTree([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Initialize with mock data
-    setFileTree(mockFileSystem);
+    console.log("[Explorer] Initial load with currentPath:", currentPath);
+    loadFiles(currentPath);
   }, []);
 
-  const toggleFolder = (path: string) => {
+  // Update when workingDirectory prop changes
+  useEffect(() => {
+    console.log("[Explorer] workingDirectory prop changed:", workingDirectory);
+    console.log("[Explorer] currentPath state:", currentPath);
+    
+    if (workingDirectory && workingDirectory !== currentPath) {
+      console.log("[Explorer] Updating to new working directory:", workingDirectory);
+      setCurrentPath(workingDirectory);
+      loadFiles(workingDirectory);
+    }
+  }, [workingDirectory]);
+
+  const toggleFolder = async (path: string) => {
     const updateNode = (nodes: FileNode[]): FileNode[] => {
       return nodes.map((node) => {
         if (node.path === path && node.type === "folder") {
-          return { ...node, isExpanded: !node.isExpanded };
+          // If expanding and no children loaded yet, we'll load them
+          const wasExpanded = node.isExpanded;
+          const newNode = { ...node, isExpanded: !node.isExpanded };
+          
+          // Load children when expanding for the first time
+          if (!wasExpanded && !node.children) {
+            loadFolderChildren(path, newNode);
+          }
+          
+          return newNode;
         }
         if (node.children) {
           return { ...node, children: updateNode(node.children) };
@@ -134,11 +119,65 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
     setFileTree(updateNode(fileTree));
   };
 
-  const handleFileSelect = (path: string, type: "file" | "folder") => {
+  const loadFolderChildren = async (folderPath: string, parentNode: FileNode) => {
+    try {
+      console.log("[Explorer] Loading children for folder:", folderPath);
+      console.log("[Explorer] Parent node:", parentNode.name);
+      
+      const request: ListFilesRequest = { path: folderPath };
+      const response = await fetch("/api/files/list", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+      });
+
+      console.log("[Explorer] Folder children API response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn(`[Explorer] Failed to load children for ${folderPath}:`, errorData);
+        return;
+      }
+
+      const data: ListFilesResponse = await response.json();
+      console.log("[Explorer] Folder children API response:", data);
+      
+      // Convert to FileNode format
+      const children: FileNode[] = data.files.map(file => ({
+        ...file,
+        isExpanded: false,
+        lastModified: file.lastModified ? new Date(file.lastModified) : undefined,
+      }));
+
+      console.log("[Explorer] Converted folder children:", children.length, "items");
+
+      // Update the tree with the loaded children
+      const updateWithChildren = (nodes: FileNode[]): FileNode[] => {
+        return nodes.map((node) => {
+          if (node.path === folderPath) {
+            console.log("[Explorer] Updating node with children:", node.name, children.length, "children");
+            return { ...node, children };
+          }
+          if (node.children) {
+            return { ...node, children: updateWithChildren(node.children) };
+          }
+          return node;
+        });
+      };
+
+      setFileTree(updateWithChildren);
+    } catch (error) {
+      console.error(`[Explorer] Failed to load children for ${folderPath}:`, error);
+    }
+  };
+
+  const handleFileSelect = async (path: string, type: "file" | "folder") => {
     if (type === "file") {
       setSelectedFile(path);
     } else {
-      toggleFolder(path);
+      await toggleFolder(path);
     }
   };
 
@@ -202,6 +241,13 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
       <div key={node.path}>
         <div
           onClick={() => handleFileSelect(node.path, node.type)}
+          onDoubleClick={() => {
+            if (node.type === "folder") {
+              setCurrentPath(node.path);
+              setSelectedFile(null);
+              loadFiles(node.path);
+            }
+          }}
           className={`
             flex items-center gap-2 px-2 py-1 rounded cursor-pointer smooth-transition
             ${isSelected ? "bg-accent/20 text-primary" : "text-secondary hover:text-primary hover:bg-black-secondary/50"}
@@ -251,8 +297,10 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
   };
 
   const goHome = () => {
-    setCurrentPath("~");
+    const homePath = "~";
+    setCurrentPath(homePath);
     setSelectedFile(null);
+    loadFiles(homePath);
   };
 
   const getSelectedFileDetails = () => {
@@ -278,18 +326,39 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
     <div className="space-y-4">
       {/* Explorer Controls */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-secondary text-sm">
-          <FolderIcon className="w-4 h-4 text-accent" />
-          <span>Explorer - {currentPath}</span>
+        <div className="flex items-center gap-2 text-secondary text-sm min-w-0 flex-1">
+          <FolderIcon className="w-4 h-4 text-accent flex-shrink-0" />
+          <span className="truncate">Explorer - {currentPath}</span>
         </div>
 
-        <button
-          onClick={goHome}
-          className="p-2 glass-button glow-border smooth-transition rounded-lg"
-          aria-label="Home directory"
-        >
-          <HomeIcon className="w-4 h-4 text-accent" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Parent Directory Button */}
+          {currentPath !== "/" && currentPath !== "~" && (
+            <button
+              onClick={() => {
+                const parentPath = currentPath.split("/").slice(0, -1).join("/") || "/";
+                setCurrentPath(parentPath);
+                setSelectedFile(null);
+                loadFiles(parentPath);
+              }}
+              className="p-2 glass-button glow-border smooth-transition rounded-lg"
+              aria-label="Parent directory"
+              title="Go to parent directory"
+            >
+              <ChevronRightIcon className="w-4 h-4 text-accent rotate-180" />
+            </button>
+          )}
+          
+          {/* Home Button */}
+          <button
+            onClick={goHome}
+            className="p-2 glass-button glow-border smooth-transition rounded-lg"
+            aria-label="Home directory"
+            title="Go to home directory"
+          >
+            <HomeIcon className="w-4 h-4 text-accent" />
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -308,9 +377,30 @@ export function ExplorerPanel({ workingDirectory = "~" }: ExplorerPanelProps) {
       <div className="flex gap-4" style={{ height: "350px" }}>
         {/* Tree View */}
         <div className="flex-1 glass-card rounded-lg p-3 overflow-y-auto">
-          <div className="space-y-1">
-            {fileTree.map((node) => renderFileNode(node))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-secondary text-sm">Loading files...</div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-2">
+              <ExclamationTriangleIcon className="w-8 h-8 text-accent" />
+              <div className="text-accent text-sm text-center">{error}</div>
+              <button
+                onClick={() => loadFiles(currentPath)}
+                className="px-3 py-1 text-xs glass-button rounded"
+              >
+                Retry
+              </button>
+            </div>
+          ) : fileTree.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-tertiary text-sm">No files found</div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {fileTree.map((node) => renderFileNode(node))}
+            </div>
+          )}
         </div>
 
         {/* File Details */}
