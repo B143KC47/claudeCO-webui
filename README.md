@@ -34,16 +34,16 @@
 <td align="center"><strong>MCP Server Configuration</strong><br/>MCP服务器配置</td>
 </tr>
 <tr>
-<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Session+Manager" alt="Session Manager" width="300"/></td>
-<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=MCP+Configuration" alt="MCP Config" width="300"/></td>
+<td align="center"><img src="./Picture/session.png" alt="Session Manager" width="300"/></td>
+<td align="center"><img src="./Picture/mcp.png" alt="MCP Config" width="300"/></td>
 </tr>
 <tr>
-<td align="center"><strong>Integrated Terminal</strong><br/>集成终端</td>
-<td align="center"><strong>File Explorer</strong><br/>文件浏览器</td>
+<td align="center"><strong>Chat Interface</strong><br/>聊天界面</td>
+<td align="center"><strong>Project Overview</strong><br/>项目概览</td>
 </tr>
 <tr>
-<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Integrated+Terminal" alt="Terminal" width="300"/></td>
-<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=File+Explorer" alt="File Explorer" width="300"/></td>
+<td align="center"><img src="./Picture/Chat interface.png" alt="Chat Interface" width="300"/></td>
+<td align="center"><img src="./Picture/Project .png" alt="Project Overview" width="300"/></td>
 </tr>
 </table>
 
