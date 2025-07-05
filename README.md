@@ -1,30 +1,53 @@
 # 🚀 Claude Code WebUI
 
+<div align="center">
+
 [![CI](https://github.com/B143KC47/claudeCO-webui/actions/workflows/ci.yml/badge.svg)](https://github.com/B143KC47/claudeCO-webui/actions/workflows/ci.yml)
 [![Release](https://github.com/B143KC47/claudeCO-webui/actions/workflows/release.yml/badge.svg)](https://github.com/B143KC47/claudeCO-webui/actions/workflows/release.yml)
 [![Version](https://img.shields.io/github/v/release/B143KC47/claudeCO-webui)](https://github.com/B143KC47/claudeCO-webui/releases)
 
+</div>
+
+<div align="center">
+
 > **A comprehensive web interface for Claude Code with advanced session management and integrated development tools**  
 > **一个功能完整的Claude Code Web界面，提供会话管理、历史记录、MCP服务器配置和集成开发工具的现代化Web应用**
 
+</div>
+
+---
+
 ## 🎬 Demo
+
+<div align="center">
 
 > **Experience the power of Claude Code WebUI in action**  
 > **体验Claude Code WebUI的强大功能**
 
-### Screenshots | 截图展示
+</div>
 
-| Feature | Preview |
-|---------|---------|
-| **Session Management** 会话管理 | ![Session Manager](https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Session+Manager) |
-| **MCP Server Configuration** MCP服务器配置 | ![MCP Config](https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=MCP+Configuration) |
-| **Integrated Terminal** 集成终端 | ![Terminal](https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Integrated+Terminal) |
-| **File Explorer** 文件浏览器 | ![File Explorer](https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=File+Explorer) |
+### 📸 Screenshots | 截图展示
 
-### Live Demo | 在线演示
+<table align="center">
+<tr>
+<td align="center"><strong>Session Management</strong><br/>会话管理</td>
+<td align="center"><strong>MCP Server Configuration</strong><br/>MCP服务器配置</td>
+</tr>
+<tr>
+<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Session+Manager" alt="Session Manager" width="300"/></td>
+<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=MCP+Configuration" alt="MCP Config" width="300"/></td>
+</tr>
+<tr>
+<td align="center"><strong>Integrated Terminal</strong><br/>集成终端</td>
+<td align="center"><strong>File Explorer</strong><br/>文件浏览器</td>
+</tr>
+<tr>
+<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=Integrated+Terminal" alt="Terminal" width="300"/></td>
+<td align="center"><img src="https://via.placeholder.com/600x400/1a1a1a/ff6b35?text=File+Explorer" alt="File Explorer" width="300"/></td>
+</tr>
+</table>
 
-**Try it online:** [Demo Link](https://your-demo-url.com) *(Coming Soon)*  
-**在线试用：** [演示链接](https://your-demo-url.com) *（即将推出）*
+
 
 ---
 
@@ -133,7 +156,7 @@ npm run dev
 
 ---
 
-## ⚙️ Configuration Options | 配置选项
+## 🚀 Quick Start | 快速开始
 
 ### Command Line Arguments | 命令行参数
 
