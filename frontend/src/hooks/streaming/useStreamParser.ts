@@ -157,7 +157,10 @@ export function useStreamParser() {
     (claudeData: SDKMessage, context: StreamingContext) => {
       // Extract session ID from any message that has it
       if (claudeData.session_id && context.onSessionId && !context.sessionId) {
-        console.log(`[Session] Extracting session ID from ${claudeData.type} message:`, claudeData.session_id);
+        console.log(
+          `[Session] Extracting session ID from ${claudeData.type} message:`,
+          claudeData.session_id,
+        );
         context.onSessionId(claudeData.session_id);
       }
 

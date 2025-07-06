@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FolderIcon, PlusIcon, CogIcon } from "@heroicons/react/24/outline";
 import type { ProjectsResponse, ProjectInfo } from "../types";
 import { getProjectsUrl } from "../config/api";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface SystemInfo {
   username: string;
@@ -22,6 +23,7 @@ export function ProjectSelector() {
   const [newDirectoryPath, setNewDirectoryPath] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // Generate smart path suggestions based on system info and common patterns
   const generateSmartPath = useCallback(
@@ -184,7 +186,7 @@ export function ProjectSelector() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black-primary">
-        <div className="text-secondary">Loading projects...</div>
+        <div className="text-secondary">{t("common.loading")}</div>
       </div>
     );
   }
@@ -192,7 +194,9 @@ export function ProjectSelector() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black-primary">
-        <div className="text-accent">Error: {error}</div>
+        <div className="text-accent">
+          {t("common.error")}: {error}
+        </div>
       </div>
     );
   }
@@ -202,14 +206,14 @@ export function ProjectSelector() {
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-primary text-gradient text-3xl font-bold tracking-tight">
-            Select a Project
+            {t("project.title")}
           </h1>
           <button
             onClick={handleOpenSettings}
             className="flex items-center gap-2 px-4 py-2 glass-card hover:glow-effect smooth-transition rounded-lg text-secondary hover:text-primary"
           >
             <CogIcon className="h-5 w-5" />
-            <span>Settings</span>
+            <span>{t("nav.settings")}</span>
           </button>
         </div>
 
@@ -217,7 +221,7 @@ export function ProjectSelector() {
           {projects.length > 0 && (
             <>
               <h2 className="text-secondary text-lg font-medium mb-4">
-                Recent Projects
+                {t("project.configured")}
               </h2>
               {projects.map((project) => (
                 <button
@@ -241,7 +245,7 @@ export function ProjectSelector() {
           >
             <PlusIcon className="h-5 w-5 text-primary flex-shrink-0" />
             <span className="text-primary font-medium">
-              Select New Directory
+              {t("project.custom")}
             </span>
           </button>
 

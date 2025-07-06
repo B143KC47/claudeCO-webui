@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { StopIcon } from "@heroicons/react/24/solid";
 import { UI_CONSTANTS, KEYBOARD_SHORTCUTS } from "../../utils/constants";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface ChatInputProps {
   input: string;
@@ -21,6 +22,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isComposing, setIsComposing] = useState(false);
+  const { t } = useLanguage();
 
   // Focus input when not loading
   useEffect(() => {
@@ -76,8 +78,8 @@ export function ChatInput({
           onCompositionEnd={handleCompositionEnd}
           placeholder={
             isLoading && currentRequestId
-              ? "Processing... (Press ESC to stop)"
-              : "Type your message... (Shift+Enter for new line)"
+              ? `${t("chat.thinking")} (ESC)`
+              : t("chat.placeholder")
           }
           rows={1}
           className={`w-full px-4 py-3 pr-32 glass-input text-primary placeholder-text-tertiary resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px] smooth-transition rounded-2xl`}
@@ -99,7 +101,7 @@ export function ChatInput({
             disabled={!input.trim() || isLoading}
             className="px-4 py-2 bg-gradient-primary text-primary rounded-xl font-medium smooth-transition glow-effect disabled:cursor-not-allowed disabled:opacity-50 text-sm"
           >
-            {isLoading ? "..." : "Send"}
+            {isLoading ? "..." : t("chat.send")}
           </button>
         </div>
       </form>

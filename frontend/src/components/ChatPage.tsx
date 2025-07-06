@@ -31,6 +31,7 @@ import { ExplorerPanel } from "./toolbar/ExplorerPanel";
 import { getChatUrl, getProjectsUrl } from "../config/api";
 import { KEYBOARD_SHORTCUTS, BUTTON_STYLES } from "../utils/constants";
 import type { StreamingContext } from "../hooks/streaming/useMessageProcessor";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // Tab type definition
 type MainTab = "chat" | "browser" | "terminal" | "explorer";
@@ -67,6 +68,7 @@ export function ChatPage() {
   const { theme, toggleTheme } = useTheme();
   const { processStreamLine } = useClaudeStreaming();
   const { abortRequest, createAbortHandler } = useAbortController();
+  const { t } = useLanguage();
 
   const {
     messages,
@@ -134,7 +136,9 @@ export function ChatPage() {
       // Use existing session ID or let Claude SDK create one
       const sessionId = currentSessionId;
       if (!sessionId) {
-        console.log("[Session] No current session, will let Claude SDK create one");
+        console.log(
+          "[Session] No current session, will let Claude SDK create one",
+        );
       } else {
         console.log("[Session] Using existing session:", sessionId);
       }
@@ -173,7 +177,7 @@ export function ChatPage() {
           ...(workingDirectory ? { workingDirectory } : {}),
           ...(thinkingConfig ? { thinking: thinkingConfig } : {}),
         } as ChatRequest;
-        
+
         console.log("[Session] Sending request with body:", requestBody);
 
         const response = await fetch(getChatUrl(), {
@@ -197,9 +201,12 @@ export function ChatPage() {
           addMessage,
           updateLastMessage,
           onSessionId: (newSessionId: string) => {
-            console.log("[Session] Received session ID from SDK:", newSessionId);
+            console.log(
+              "[Session] Received session ID from SDK:",
+              newSessionId,
+            );
             setCurrentSessionId(newSessionId);
-            
+
             // Update URL with new session ID from SDK
             const newSearchParams = new URLSearchParams(searchParams);
             newSearchParams.set("sessionId", newSessionId);
@@ -463,14 +470,16 @@ export function ChatPage() {
               <button
                 onClick={handleBackToChat}
                 className={BUTTON_STYLES.ICON_BUTTON}
-                aria-label="Back to chat"
+                aria-label={t("chat.backToChat")}
               >
                 <ChevronLeftIcon className="w-5 h-5 text-accent" />
               </button>
             )}
             <div>
               <h1 className="text-primary text-3xl font-bold tracking-tight text-gradient">
-                {isHistoryView ? "Conversation History" : "Claude Code Web UI"}
+                {isHistoryView
+                  ? t("chat.conversationHistory")
+                  : t("chat.title")}
               </h1>
               {workingDirectory && (
                 <p className="text-tertiary text-sm font-mono mt-1">
@@ -484,7 +493,7 @@ export function ChatPage() {
             <button
               onClick={handleOpenSettings}
               className={BUTTON_STYLES.ICON_BUTTON}
-              aria-label="Settings"
+              aria-label={t("nav.settings")}
             >
               <CogIcon className="w-5 h-5 text-accent" />
             </button>
@@ -518,7 +527,7 @@ export function ChatPage() {
                     `}
                   >
                     <ChatBubbleLeftIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Chat</span>
+                    <span className="hidden sm:inline">{t("chat.chat")}</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("browser")}
@@ -532,7 +541,9 @@ export function ChatPage() {
                     `}
                   >
                     <ComputerDesktopIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Browser</span>
+                    <span className="hidden sm:inline">
+                      {t("chat.browser")}
+                    </span>
                   </button>
                   <button
                     onClick={() => setActiveTab("terminal")}
@@ -546,7 +557,9 @@ export function ChatPage() {
                     `}
                   >
                     <CommandLineIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Terminal</span>
+                    <span className="hidden sm:inline">
+                      {t("chat.terminal")}
+                    </span>
                   </button>
                   <button
                     onClick={() => setActiveTab("explorer")}
@@ -560,7 +573,9 @@ export function ChatPage() {
                     `}
                   >
                     <FolderIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Explorer</span>
+                    <span className="hidden sm:inline">
+                      {t("chat.explorer")}
+                    </span>
                   </button>
                 </div>
 
@@ -568,7 +583,9 @@ export function ChatPage() {
                   onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
                   className="p-2 text-tertiary hover:text-primary smooth-transition rounded-lg hover:bg-black-secondary/50"
                   aria-label={
-                    isToolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"
+                    isToolbarCollapsed
+                      ? t("chat.expandToolbar")
+                      : t("chat.collapseToolbar")
                   }
                 >
                   <XMarkIcon className="w-4 h-4" />

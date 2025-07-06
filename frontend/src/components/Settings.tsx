@@ -4,29 +4,39 @@ import {
   ChevronLeftIcon,
   CogIcon,
   CurrencyDollarIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { MCPTab } from "./settings/MCPTab";
 import { BillTab } from "./settings/BillTab";
+import { GeneralTab } from "./settings/GeneralTab";
+import { useLanguage } from "../contexts/LanguageContext";
 
-type TabType = "mcp" | "bill";
+type TabType = "general" | "mcp" | "bill";
 
 export function Settings() {
-  const [activeTab, setActiveTab] = useState<TabType>("mcp");
+  const [activeTab, setActiveTab] = useState<TabType>("general");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const tabs = [
     {
+      id: "general" as TabType,
+      name: t("settings.general"),
+      icon: Cog6ToothIcon,
+      description: t("settings.general.desc"),
+    },
+    {
       id: "mcp" as TabType,
-      name: "MCP",
+      name: t("settings.mcp"),
       icon: CogIcon,
-      description: "MCP Server Configuration",
+      description: t("settings.mcp.desc"),
     },
     {
       id: "bill" as TabType,
-      name: "Bill",
+      name: t("settings.bill"),
       icon: CurrencyDollarIcon,
-      description: "Usage & Billing",
+      description: t("settings.bill.desc"),
     },
   ];
 
@@ -49,10 +59,10 @@ export function Settings() {
             className="flex items-center gap-2 text-secondary hover:text-primary smooth-transition"
           >
             <ChevronLeftIcon className="h-5 w-5" />
-            <span>Back</span>
+            <span>{t("nav.back")}</span>
           </button>
           <h1 className="text-primary text-gradient text-xl font-bold tracking-tight">
-            Settings
+            {t("nav.settings")}
           </h1>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -118,10 +128,10 @@ export function Settings() {
               className="flex items-center gap-2 text-secondary hover:text-primary smooth-transition mb-4"
             >
               <ChevronLeftIcon className="h-5 w-5" />
-              <span>Back</span>
+              <span>{t("nav.back")}</span>
             </button>
             <h1 className="text-primary text-gradient text-2xl font-bold tracking-tight">
-              Settings
+              {t("nav.settings")}
             </h1>
           </div>
 
@@ -158,6 +168,7 @@ export function Settings() {
         {/* Main Content */}
         <div className="flex-1 overflow-auto">
           <div className="p-4 lg:p-8">
+            {activeTab === "general" && <GeneralTab />}
             {activeTab === "mcp" && <MCPTab />}
             {activeTab === "bill" && <BillTab />}
           </div>

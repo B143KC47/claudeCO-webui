@@ -8,6 +8,7 @@ import { TimestampComponent } from "./TimestampComponent";
 import { MessageContainer } from "./messages/MessageContainer";
 import { CollapsibleDetails } from "./messages/CollapsibleDetails";
 import { MESSAGE_CONSTANTS } from "../utils/constants";
+import { useLanguage } from "../contexts/LanguageContext";
 
 // Tool style detection - matches all Claude Code tools
 type ToolStyle =
@@ -185,6 +186,7 @@ interface ChatMessageComponentProps {
 }
 
 export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
+  const { t } = useLanguage();
   const isUser = message.role === "user";
   const colorScheme = isUser
     ? "bg-gradient-primary text-primary"
@@ -220,7 +222,7 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
           }`}
         >
           {isUser ? (
-            "User"
+            t("message.user")
           ) : (
             <>
               {isThinking && (
@@ -228,7 +230,7 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
                   💭
                 </span>
               )}
-              Claude
+              {t("message.claude")}
             </>
           )}
         </div>
@@ -253,22 +255,24 @@ interface SystemMessageComponentProps {
 export function SystemMessageComponent({
   message,
 }: SystemMessageComponentProps) {
+  const { t } = useLanguage();
+
   // Generate details based on message type and subtype
   const getDetails = () => {
     if (message.type === "system" && message.subtype === "init") {
       return [
-        `Model: ${message.model}`,
-        `Session: ${message.session_id.substring(0, MESSAGE_CONSTANTS.SESSION_ID_DISPLAY_LENGTH)}`,
-        `Tools: ${message.tools.length} available`,
-        `CWD: ${message.cwd}`,
-        `Permission Mode: ${message.permissionMode}`,
-        `API Key Source: ${message.apiKeySource}`,
+        `${t("message.model")}: ${message.model}`,
+        `${t("message.session")}: ${message.session_id.substring(0, MESSAGE_CONSTANTS.SESSION_ID_DISPLAY_LENGTH)}`,
+        `${t("message.tools")}: ${message.tools.length} ${t("message.available")}`,
+        `${t("message.cwd")}: ${message.cwd}`,
+        `${t("message.permissionMode")}: ${message.permissionMode}`,
+        `${t("message.apiKeySource")}: ${message.apiKeySource}`,
       ].join("\n");
     } else if (message.type === "result") {
       const details = [
-        `Duration: ${message.duration_ms}ms`,
-        `Cost: $${message.total_cost_usd.toFixed(4)}`,
-        `Tokens: ${message.usage.input_tokens} in, ${message.usage.output_tokens} out`,
+        `${t("message.duration")}: ${message.duration_ms}ms`,
+        `${t("message.cost")}: $${message.total_cost_usd.toFixed(4)}`,
+        `${t("message.tokens")}: ${message.usage.input_tokens} ${t("message.in")}, ${message.usage.output_tokens} ${t("message.out")}`,
       ];
       return details.join("\n");
     } else if (message.type === "error") {
@@ -279,10 +283,10 @@ export function SystemMessageComponent({
 
   // Get label based on message type
   const getLabel = () => {
-    if (message.type === "system") return "System";
-    if (message.type === "result") return "Result";
-    if (message.type === "error") return "Error";
-    return "Message";
+    if (message.type === "system") return t("message.system");
+    if (message.type === "result") return t("message.result");
+    if (message.type === "error") return t("message.error");
+    return t("message.message");
   };
 
   const details = getDetails();

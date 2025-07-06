@@ -2,6 +2,7 @@ import {
   XMarkIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface PermissionDialogProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export function PermissionDialog({
   onClose,
   getButtonClassName = (_, defaultClassName) => defaultClassName, // Default: no modification
 }: PermissionDialogProps) {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   const handleDeny = () => {
@@ -44,7 +47,7 @@ export function PermissionDialog({
               <ExclamationTriangleIcon className="w-5 h-5 text-primary" />
             </div>
             <h2 className="text-lg font-semibold text-primary">
-              Permission Required
+              {t("permission.title")}
             </h2>
           </div>
           <button
@@ -58,14 +61,12 @@ export function PermissionDialog({
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-secondary mb-4">
-            Claude wants to use the{" "}
+          <p className="text-secondary mb-6">
+            {t("permission.message")}{" "}
             <span className="font-mono bg-black-quaternary text-accent px-2 py-1 rounded text-sm">
               {pattern}
-            </span>{" "}
-            tool.
+            </span>
           </p>
-          <p className="text-sm text-tertiary mb-6">Do you want to proceed?</p>
 
           {/* Action buttons */}
           <div className="space-y-3">
@@ -76,7 +77,7 @@ export function PermissionDialog({
                 "w-full px-4 py-3 bg-gradient-primary glow-effect hover:glow-border text-primary rounded-lg font-medium smooth-transition shadow-sm hover:shadow-md",
               )}
             >
-              Yes
+              {t("permission.allowOnce")}
             </button>
             <button
               onClick={onAllowPermanent}
@@ -85,7 +86,7 @@ export function PermissionDialog({
                 "w-full px-4 py-3 bg-gradient-secondary glow-effect hover:glow-border text-primary rounded-lg font-medium smooth-transition shadow-sm hover:shadow-md",
               )}
             >
-              Yes, and don't ask again for {toolName}
+              {t("permission.allowAlways")}
             </button>
             <button
               onClick={handleDeny}
@@ -94,7 +95,7 @@ export function PermissionDialog({
                 "w-full px-4 py-3 glass-button hover:glow-effect text-secondary rounded-lg font-medium smooth-transition",
               )}
             >
-              No
+              {t("permission.deny")}
             </button>
           </div>
         </div>
