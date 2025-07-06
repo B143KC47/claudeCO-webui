@@ -83,7 +83,7 @@ async function* executeClaudeCommand(
         stdout: "piped",
         stderr: "piped",
       }).output();
-      
+
       if (whichResult.success) {
         claudePath = new TextDecoder().decode(whichResult.stdout).trim();
         console.log("[Chat] Found Claude at:", claudePath);
@@ -103,7 +103,10 @@ async function* executeClaudeCommand(
         console.log("[Chat] Using default 'claude' command");
       }
     } catch (error) {
-      console.log("[Chat] Claude detection warning:", error.message);
+      console.log(
+        "[Chat] Claude detection warning:",
+        error instanceof Error ? error.message : String(error),
+      );
       // Continue with default claude command
     }
 
@@ -130,10 +133,12 @@ async function* executeClaudeCommand(
         console.debug(JSON.stringify(sdkMessage, null, 2));
         console.debug("---");
       }
-      
+
       // Log session ID extraction for debugging
       if (sdkMessage.session_id) {
-        console.log(`[Session] SDK Message type: ${sdkMessage.type}, session_id: ${sdkMessage.session_id}`);
+        console.log(
+          `[Session] SDK Message type: ${sdkMessage.type}, session_id: ${sdkMessage.session_id}`,
+        );
       }
 
       yield {
@@ -162,7 +167,10 @@ async function* executeClaudeCommand(
       ) {
         console.error("[Chat] Claude Code process exited with code 1");
         console.error("[Chat] Full error:", error);
-        console.error("[Chat] Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+        console.error(
+          "[Chat] Stack trace:",
+          error instanceof Error ? error.stack : "No stack trace",
+        );
 
         // Try to extract more specific error information
         let specificError = "Claude Code process exited unexpectedly.";
@@ -172,13 +180,13 @@ async function* executeClaudeCommand(
           specificError = "Claude Code API key is not configured.";
           solutions = [
             "• Set your API key with: export ANTHROPIC_API_KEY='your-key'",
-            "• Or use Claude Code Max which doesn't require an API key"
+            "• Or use Claude Code Max which doesn't require an API key",
           ];
         } else if (errorMessage.includes("rate limit")) {
           specificError = "Claude API rate limit exceeded.";
           solutions = [
             "• Wait a few minutes before trying again",
-            "• Check your usage at anthropic.com"
+            "• Check your usage at anthropic.com",
           ];
         } else if (
           errorMessage.includes("authentication") ||
@@ -187,19 +195,19 @@ async function* executeClaudeCommand(
           specificError = "Claude API authentication failed.";
           solutions = [
             "• Verify your API key is correct",
-            "• Check if your API key has expired"
+            "• Check if your API key has expired",
           ];
         } else if (errorMessage.includes("quota")) {
           specificError = "Claude API quota exceeded.";
           solutions = [
             "• Check your usage limits at anthropic.com",
-            "• Upgrade your plan if needed"
+            "• Upgrade your plan if needed",
           ];
         } else if (errorMessage.includes("Invalid request")) {
           specificError = "Invalid request sent to Claude.";
           solutions = [
             "• Check if the message format is correct",
-            "• Try a simpler message to test"
+            "• Try a simpler message to test",
           ];
         } else {
           // Generic error - check Claude authentication status
@@ -207,7 +215,7 @@ async function* executeClaudeCommand(
             "• Run 'claude --version' to check Claude is working",
             "• For Claude Code Max users: ensure you're logged in with 'claude login'",
             "• For API users: ensure ANTHROPIC_API_KEY is set",
-            "• Check the backend logs for more details"
+            "• Check the backend logs for more details",
           ];
         }
 

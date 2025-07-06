@@ -8,6 +8,7 @@ import {
   CommandLineIcon,
   FolderIcon,
   XMarkIcon,
+  CodeBracketIcon,
 } from "@heroicons/react/24/outline";
 import type { ChatRequest, ChatMessage, ProjectInfo } from "../types";
 import { THINKING_MODE_CONFIGS } from "../types";
@@ -28,13 +29,14 @@ import { SessionManager } from "./SessionManager";
 import { BrowserPanel } from "./toolbar/BrowserPanel";
 import { TerminalPanel } from "./toolbar/TerminalPanel";
 import { ExplorerPanel } from "./toolbar/ExplorerPanel";
+import { GitPanel } from "./toolbar/GitPanel";
 import { getChatUrl, getProjectsUrl } from "../config/api";
 import { KEYBOARD_SHORTCUTS, BUTTON_STYLES } from "../utils/constants";
 import type { StreamingContext } from "../hooks/streaming/useMessageProcessor";
 import { useLanguage } from "../contexts/LanguageContext";
 
 // Tab type definition
-type MainTab = "chat" | "browser" | "terminal" | "explorer";
+type MainTab = "chat" | "browser" | "terminal" | "explorer" | "git";
 
 export function ChatPage() {
   const location = useLocation();
@@ -577,6 +579,20 @@ export function ChatPage() {
                       {t("chat.explorer")}
                     </span>
                   </button>
+                  <button
+                    onClick={() => setActiveTab("git")}
+                    className={`
+                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      ${
+                        activeTab === "git"
+                          ? "bg-gradient-primary text-primary glow-effect"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                      }
+                    `}
+                  >
+                    <CodeBracketIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Git</span>
+                  </button>
                 </div>
 
                 <button
@@ -640,6 +656,17 @@ export function ChatPage() {
                   {activeTab === "explorer" && (
                     <div className="h-full">
                       <ExplorerPanel workingDirectory={workingDirectory} />
+                    </div>
+                  )}
+
+                  {/* Git Panel */}
+                  {activeTab === "git" && workingDirectory && (
+                    <div className="h-full relative">
+                      <GitPanel
+                        isOpen={true}
+                        onClose={() => setActiveTab("chat")}
+                        workingDirectory={workingDirectory}
+                      />
                     </div>
                   )}
                 </div>

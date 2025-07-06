@@ -13,6 +13,19 @@ import { handleChatRequest } from "./handlers/chat.ts";
 import { handleAbortRequest } from "./handlers/abort.ts";
 import { handleMCP } from "./handlers/mcp.ts";
 import { handleBillingRequest } from "./handlers/billing.ts";
+import { handleUsageRequest } from "./handlers/usage.ts";
+import {
+  handleGitBranches,
+  handleGitCheckout,
+  handleGitCommit,
+  handleGitDiff,
+  handleGitLog,
+  handleGitPull,
+  handleGitPush,
+  handleGitStage,
+  handleGitStatus,
+  handleGitUnstage,
+} from "./handlers/git.ts";
 import {
   handlePathValidation,
   handleTerminalAbort,
@@ -102,6 +115,19 @@ app.delete("/api/mcp/remove", async (c) => {
 });
 
 app.get("/api/billing", (c) => handleBillingRequest(c));
+app.post("/api/usage", (c) => handleUsageRequest(c));
+
+// Git API routes
+app.post("/api/git/status", (c) => handleGitStatus(c));
+app.post("/api/git/branches", (c) => handleGitBranches(c));
+app.post("/api/git/log", (c) => handleGitLog(c));
+app.post("/api/git/diff", (c) => handleGitDiff(c));
+app.post("/api/git/stage", (c) => handleGitStage(c));
+app.post("/api/git/unstage", (c) => handleGitUnstage(c));
+app.post("/api/git/commit", (c) => handleGitCommit(c));
+app.post("/api/git/push", (c) => handleGitPush(c));
+app.post("/api/git/pull", (c) => handleGitPull(c));
+app.post("/api/git/checkout", (c) => handleGitCheckout(c));
 
 // Terminal API routes
 app.post(
