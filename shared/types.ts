@@ -55,3 +55,44 @@ export interface ConversationHistory {
   };
 }
 
+// Device authentication types
+export interface DeviceAuthRequest {
+  deviceId: string;
+  deviceName: string;
+  deviceType: "mobile" | "tablet" | "desktop";
+  userAgent?: string;
+  ipAddress?: string;
+}
+
+export interface DeviceAuthResponse {
+  authToken: string;
+  deviceId: string;
+  status: "pending" | "approved" | "rejected";
+  expiresAt: string;
+}
+
+export interface DeviceVerificationRequest {
+  deviceId: string;
+  verificationCode: string;
+}
+
+export interface Device {
+  id: string;
+  name: string;
+  type: "mobile" | "tablet" | "desktop";
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  lastActiveAt: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface DeviceListResponse {
+  devices: Device[];
+}
+
+export interface AuthorizeDeviceRequest {
+  deviceId: string;
+  action: "approve" | "reject";
+}
+

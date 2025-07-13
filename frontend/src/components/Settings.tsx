@@ -5,13 +5,15 @@ import {
   CogIcon,
   CurrencyDollarIcon,
   Cog6ToothIcon,
+  DevicePhoneMobileIcon,
 } from "@heroicons/react/24/outline";
 import { MCPTab } from "./settings/MCPTab";
 import { BillTab } from "./settings/BillTab";
 import { GeneralTab } from "./settings/GeneralTab";
+import { DeviceTab } from "./settings/DeviceTab";
 import { useLanguage } from "../contexts/LanguageContext";
 
-type TabType = "general" | "mcp" | "bill";
+type TabType = "general" | "mcp" | "bill" | "devices";
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState<TabType>("general");
@@ -37,6 +39,12 @@ export function Settings() {
       name: t("settings.bill"),
       icon: CurrencyDollarIcon,
       description: t("settings.bill.desc"),
+    },
+    {
+      id: "devices" as TabType,
+      name: "Devices",
+      icon: DevicePhoneMobileIcon,
+      description: "Manage connected devices and mobile access",
     },
   ];
 
@@ -171,6 +179,7 @@ export function Settings() {
             {activeTab === "general" && <GeneralTab />}
             {activeTab === "mcp" && <MCPTab />}
             {activeTab === "bill" && <BillTab />}
+            {activeTab === "devices" && <DeviceTab />}
           </div>
         </div>
       </div>

@@ -196,6 +196,50 @@ The application supports conversation continuity within the same chat session us
 - **Efficient**: Leverages Claude Code SDK's native session management
 - **Seamless**: Works automatically without user configuration
 
+## Mobile Device Authentication
+
+The application supports secure mobile device connections through both LAN and WAN with an authorization flow.
+
+### Features
+
+1. **Device Registration**: Mobile devices can register with a name and type
+2. **Authorization Flow**: Desktop users approve/reject device access requests
+3. **Token Authentication**: Approved devices receive JWT tokens for API access
+4. **Device Management**: View and revoke connected devices in Settings
+5. **Network Discovery**: Automatic LAN/WAN URL detection for easy connection
+6. **Rate Limiting**: Protection against brute force attempts
+
+### How to Connect a Mobile Device
+
+1. **On Desktop**: Navigate to Settings → Devices to see connection URLs
+2. **On Mobile**: Open browser and navigate to one of the provided URLs
+3. **Register Device**: Enter a device name (e.g., "John's iPhone")
+4. **Authorization**: A popup appears on desktop asking "Is this your device?"
+5. **Approve**: Click "Approve" to grant access
+6. **Connected**: Mobile device receives authentication token
+
+### API Authentication
+
+Mobile devices use Bearer token authentication:
+
+```javascript
+fetch('http://server:8080/api/chat', {
+  headers: {
+    'Authorization': 'Bearer <token>',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ message: 'Hello' })
+})
+```
+
+### Security Features
+
+- **JWT Tokens**: 30-day expiration with HMAC-SHA256 signing
+- **Rate Limiting**: 5 requests per minute on auth endpoints
+- **Device Tracking**: IP address and user agent logging
+- **Revocation**: Instant access revocation from Settings
+- **SQLite Storage**: Secure local database for device records
+
 ## Development
 
 ### Prerequisites
@@ -249,6 +293,7 @@ cd frontend && npm run dev      # Configures proxy to localhost:9000
 3. **Access Application**:
    - Frontend: http://localhost:3000 (or custom port via `npm run dev -- --port XXXX`)
    - Backend API: http://localhost:8080 (or PORT from .env file)
+   - Mobile Auth: http://localhost:3000/mobile-auth (accessible from mobile devices)
 
 ### Project Structure
 

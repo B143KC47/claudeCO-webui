@@ -6,6 +6,7 @@ import type { AppConfig } from "../types.ts";
  */
 interface ConfigOptions {
   debugMode: boolean;
+  port: number;
 }
 
 /**
@@ -25,6 +26,7 @@ export function createConfigMiddleware(options: ConfigOptions) {
     // Initialize application configuration
     const config: AppConfig = {
       debugMode: options.debugMode,
+      port: options.port,
       // Future configuration options can be added here
     };
 

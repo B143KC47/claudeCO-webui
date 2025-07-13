@@ -5,6 +5,7 @@
 // Application configuration shared across backend handlers
 export interface AppConfig {
   debugMode: boolean;
+  port: number;
   // Future configuration options can be added here
 }
 

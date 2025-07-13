@@ -39,6 +39,9 @@ import {
   handleSessionGet,
   handleSessionSave,
 } from "./handlers/sessions.ts";
+import { authHandler } from "./handlers/auth.ts";
+import { networkHandler } from "./handlers/network.ts";
+import { authMiddleware, rateLimitMiddleware } from "./middleware/auth.ts";
 
 const args = await parseCliArgs();
 
@@ -59,14 +62,24 @@ app.use(
   cors({
     origin: "*",
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
 // Configuration middleware - makes app settings available to all handlers
-app.use("*", createConfigMiddleware({ debugMode: DEBUG_MODE }));
+app.use("*", createConfigMiddleware({ debugMode: DEBUG_MODE, port: PORT }));
 
-// API routes
+// Apply auth middleware to all routes except auth and network endpoints
+app.use("/api/*", authMiddleware);
+
+// Auth API routes (public, with rate limiting)
+app.use("/api/auth/*", rateLimitMiddleware(5, 60000)); // 5 requests per minute
+app.route("/api/auth", authHandler);
+
+// Network info routes (public)
+app.route("/api/network", networkHandler);
+
+// API routes (protected by auth middleware)
 app.get("/api/projects", (c) => handleProjectsRequest(c));
 
 app.get(

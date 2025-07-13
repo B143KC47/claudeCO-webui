@@ -75,7 +75,7 @@ function parseGitStatus(output: string): GitFile[] {
     }
 
     const statusCode = line.substring(0, 2);
-    const filePath = line.substring(3);
+    const filePath = line.substring(2).trim();
 
     // Skip if no file path
     if (!filePath) {

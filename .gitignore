@@ -11,3 +11,7 @@ frontend/playwright-report/
 frontend/playwright/.cache/
 
 .env
+
+# Database files
+backend/auth.db
+*.db
