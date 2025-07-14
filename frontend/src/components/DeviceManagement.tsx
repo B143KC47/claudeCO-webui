@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import type { Device } from "../../../shared/types";
-import { API_BASE_URL } from "../config/api";
 
 export const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -10,7 +9,7 @@ export const DeviceManagement: React.FC = () => {
   // Fetch devices
   const fetchDevices = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/devices`);
+      const response = await fetch(`/api/auth/devices`);
       if (!response.ok) throw new Error("Failed to fetch devices");
       
       const data = await response.json();
@@ -25,7 +24,7 @@ export const DeviceManagement: React.FC = () => {
   // Fetch network info
   const fetchNetworkInfo = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/network/info`);
+      const response = await fetch(`/api/network/info`);
       if (!response.ok) throw new Error("Failed to fetch network info");
       
       const data = await response.json();
@@ -46,7 +45,7 @@ export const DeviceManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/devices/${deviceId}`, {
+      const response = await fetch(`/api/auth/devices/${deviceId}`, {
         method: "DELETE",
       });
 

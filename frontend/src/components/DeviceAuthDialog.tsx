@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import type { Device } from "../../../shared/types";
-import { API_BASE_URL } from "../config/api";
 
 interface DeviceAuthDialogProps {
   isOpen: boolean;
@@ -17,7 +16,7 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
   // Fetch pending devices
   const fetchPendingDevices = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/devices`);
+      const response = await fetch("/api/auth/devices");
       if (!response.ok) throw new Error("Failed to fetch devices");
       
       const data = await response.json();
@@ -40,7 +39,7 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
   const handleAuthorize = async (deviceId: string, action: "approve" | "reject") => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/authorize`, {
+      const response = await fetch("/api/auth/authorize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId, action }),

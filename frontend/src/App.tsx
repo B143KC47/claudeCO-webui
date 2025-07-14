@@ -7,7 +7,6 @@ import { Settings } from "./components/Settings";
 import { MobileAuth } from "./components/MobileAuth";
 import { DeviceAuthDialog } from "./components/DeviceAuthDialog";
 import { LanguageProvider } from "./contexts/LanguageContext";
-import { API_BASE_URL } from "./config/api";
 
 function App() {
   const [showDeviceAuth, setShowDeviceAuth] = useState(false);
@@ -15,9 +14,23 @@ function App() {
 
   // Check for pending devices periodically
   useEffect(() => {
+    let mounted = true;
+    let timeoutId: number | undefined;
+    
     const checkPendingDevices = async () => {
+      if (!mounted) return;
+      
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/devices`);
+        const response = await fetch("/api/auth/devices");
+        if (response.status === 429) {
+          // Rate limited - wait longer before next check
+          console.warn("Rate limited, waiting 30 seconds before retry");
+          if (mounted) {
+            timeoutId = setTimeout(checkPendingDevices, 30000);
+          }
+          return;
+        }
+        
         if (response.ok) {
           const data = await response.json();
           const pending = data.devices.some((d: any) => d.status === "pending");
@@ -28,16 +41,27 @@ function App() {
             setShowDeviceAuth(true);
           }
         }
+        
+        // Schedule next check
+        if (mounted) {
+          timeoutId = setTimeout(checkPendingDevices, 10000); // Check every 10 seconds
+        }
       } catch (error) {
         console.error("Error checking pending devices:", error);
+        // Retry after error
+        if (mounted) {
+          timeoutId = setTimeout(checkPendingDevices, 15000);
+        }
       }
     };
 
-    // Check immediately and then every 5 seconds
-    checkPendingDevices();
-    const interval = setInterval(checkPendingDevices, 5000);
+    // Start checking after a short delay to avoid immediate duplicates
+    timeoutId = setTimeout(checkPendingDevices, 1000);
     
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [showDeviceAuth]);
 
   return (

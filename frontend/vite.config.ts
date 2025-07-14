@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
+      host: true, // Allow access from network
+      https: false, // Disable HTTPS to fix SSL errors
       proxy: {
         "/api": {
           target: `http://localhost:${apiPort}`,

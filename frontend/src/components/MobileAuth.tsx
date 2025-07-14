@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { API_BASE_URL } from "../config/api";
 import type { DeviceAuthResponse } from "../../../shared/types";
 
 export const MobileAuth: React.FC = () => {
@@ -24,7 +23,7 @@ export const MobileAuth: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -53,7 +52,7 @@ export const MobileAuth: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+      const response = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
