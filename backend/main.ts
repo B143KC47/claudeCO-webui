@@ -41,7 +41,7 @@ import {
 } from "./handlers/sessions.ts";
 import { authHandler } from "./handlers/auth.ts";
 import { networkHandler } from "./handlers/network.ts";
-import { authMiddleware, rateLimitMiddleware } from "./middleware/auth.ts";
+import { authMiddleware, rateLimitMiddleware, readRateLimitMiddleware } from "./middleware/auth.ts";
 
 const args = await parseCliArgs();
 
@@ -73,7 +73,9 @@ app.use("*", createConfigMiddleware({ debugMode: DEBUG_MODE, port: PORT }));
 app.use("/api/*", authMiddleware);
 
 // Auth API routes (public, with rate limiting)
-app.use("/api/auth/*", rateLimitMiddleware(5, 60000)); // 5 requests per minute
+// Apply different rate limits for read vs write operations
+app.get("/api/auth/devices", readRateLimitMiddleware(20, 60000)); // 20 requests per minute for reading devices
+app.use("/api/auth/*", rateLimitMiddleware(10, 60000)); // 10 requests per minute for other auth operations
 app.route("/api/auth", authHandler);
 
 // Network info routes (public)

@@ -23,9 +23,15 @@ interface MCPServer {
   url?: string;
 }
 
+interface ClaudeConnection {
+  status: "connected" | "disconnected" | "error";
+  version?: string;
+  message?: string;
+}
+
 interface MCPResponse {
   servers: MCPServer[];
-  nativeServerStatus: "running" | "stopped" | "unknown";
+  claudeConnection: ClaudeConnection;
 }
 
 // 骨架屏组件
@@ -140,6 +146,7 @@ export function MCPTab() {
   const [saving, setSaving] = useState(false);
   const [deletingServer, setDeletingServer] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<MCPServer | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // 防抖相关
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
@@ -358,16 +365,21 @@ export function MCPTab() {
           };
         });
         setDeleteConfirm(null);
+        
+        // 显示成功消息
+        setSuccessMessage(`成功删除 MCP 服务器: ${deleteConfirm.name}`);
+        setTimeout(() => setSuccessMessage(null), 3000);
 
         // 后台重新加载数据以确保一致性
         setTimeout(() => loadMCPData(true), 500);
       } else {
         const errorData = await response.json();
-        alert(`删除失败: ${errorData.error || "未知错误"}`);
+        const errorMessage = errorData.details || errorData.error || "未知错误";
+        alert(`删除失败: ${errorMessage}\n\n请确保 Claude CLI 已正确安装并可访问。`);
       }
     } catch (error) {
       console.error("Error removing server:", error);
-      alert("删除服务器失败");
+      alert(`删除服务器失败: ${error instanceof Error ? error.message : "网络错误"}\n\n请检查网络连接和服务器状态。`);
     } finally {
       setDeletingServer(null);
     }
@@ -403,6 +415,16 @@ export function MCPTab() {
 
   return (
     <div className="space-y-6">
+      {/* 成功消息 */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 bg-green-500/10 border border-green-500/30 text-green-500 px-4 py-3 rounded-lg shadow-lg z-50 animate-slide-in">
+          <div className="flex items-center space-x-2">
+            <CheckCircleIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* 删除确认对话框 */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
@@ -411,17 +433,23 @@ export function MCPTab() {
               确认删除
             </h3>
             <p className="text-secondary mb-6">
-              确定要删除服务器 "
+              确定要删除 MCP 服务器 "
               <span className="font-medium text-accent">
                 {deleteConfirm.name}
               </span>
               " 吗？
               <br />
               <span
-                className="text-sm"
+                className="text-sm mt-2 block"
                 style={{ color: "var(--accent-secondary)" }}
               >
-                此操作不可撤销，将执行 claude mcp remove 命令。
+                此操作将执行命令：
+                <code className="bg-black-tertiary px-2 py-1 rounded text-xs block mt-1">
+                  claude mcp remove {deleteConfirm.name}
+                </code>
+              </span>
+              <span className="text-xs text-tertiary mt-2 block">
+                注意：此操作不可撤销，服务器配置将被永久删除。
               </span>
             </p>
             <div className="flex justify-end space-x-3">
@@ -453,7 +481,33 @@ export function MCPTab() {
 
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-primary">MCP 服务器管理</h2>
+        <div className="flex items-center space-x-3">
+          <h2 className="text-xl font-semibold text-primary">MCP 服务器管理</h2>
+          {mcpData?.claudeConnection && (
+            <div className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+              mcpData.claudeConnection.status === "connected"
+                ? "bg-green-500/10 text-green-500"
+                : mcpData.claudeConnection.status === "error"
+                ? "bg-red-500/10 text-red-500"
+                : "bg-yellow-500/10 text-yellow-500"
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                mcpData.claudeConnection.status === "connected"
+                  ? "bg-green-500"
+                  : mcpData.claudeConnection.status === "error"
+                  ? "bg-red-500"
+                  : "bg-yellow-500"
+              }`} />
+              <span>
+                {mcpData.claudeConnection.status === "connected"
+                  ? "Claude 已连接"
+                  : mcpData.claudeConnection.status === "error"
+                  ? "连接错误"
+                  : "Claude 未连接"}
+              </span>
+            </div>
+          )}
+        </div>
         <button
           onClick={handleRefresh}
           className="px-3 py-1 text-sm glass-button text-primary smooth-transition disabled:opacity-50"
@@ -484,24 +538,73 @@ export function MCPTab() {
         </select>
       </div>
 
-      {/* Native Claude Server Status */}
-      {mcpData?.nativeServerStatus && (
-        <div className="glass-card p-4 glow-border">
-          <div className="flex items-center space-x-3">
-            <ServerIcon className="h-5 w-5 text-accent" />
-            <div>
-              <h3 className="font-medium text-primary">
-                Claude Code 本地服务器
-              </h3>
-              <div className="flex items-center space-x-2 mt-1">
-                {getStatusIcon(mcpData.nativeServerStatus)}
-                <span
-                  className={`text-sm ${getStatusColor(mcpData.nativeServerStatus)}`}
-                >
-                  {getStatusText(mcpData.nativeServerStatus)}
-                </span>
+      {/* Claude Code Connection Status */}
+      {mcpData?.claudeConnection && (
+        <div className={`glass-card p-4 ${
+          mcpData.claudeConnection.status === "connected" 
+            ? "glow-border" 
+            : mcpData.claudeConnection.status === "error"
+            ? "border border-red-500/30"
+            : "border border-yellow-500/30"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <ServerIcon className={`h-5 w-5 ${
+                mcpData.claudeConnection.status === "connected"
+                  ? "text-accent"
+                  : mcpData.claudeConnection.status === "error"
+                  ? "text-red-500"
+                  : "text-yellow-500"
+              }`} />
+              <div>
+                <h3 className="font-medium text-primary">
+                  Claude Code 连接状态
+                </h3>
+                <div className="flex items-center space-x-2 mt-1">
+                  {mcpData.claudeConnection.status === "connected" ? (
+                    <CheckCircleIcon className="h-4 w-4 text-accent" />
+                  ) : mcpData.claudeConnection.status === "error" ? (
+                    <XCircleIcon className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <StopIcon className="h-4 w-4 text-yellow-500" />
+                  )}
+                  <span
+                    className={`text-sm ${
+                      mcpData.claudeConnection.status === "connected"
+                        ? "text-accent"
+                        : mcpData.claudeConnection.status === "error"
+                        ? "text-red-500"
+                        : "text-yellow-500"
+                    }`}
+                  >
+                    {mcpData.claudeConnection.status === "connected"
+                      ? "已连接"
+                      : mcpData.claudeConnection.status === "error"
+                      ? "连接错误"
+                      : "未连接"}
+                  </span>
+                  {mcpData.claudeConnection.version && (
+                    <span className="text-xs text-tertiary ml-2">
+                      {mcpData.claudeConnection.version}
+                    </span>
+                  )}
+                </div>
+                {mcpData.claudeConnection.message && (
+                  <p className="text-xs text-secondary mt-2">
+                    {mcpData.claudeConnection.message}
+                  </p>
+                )}
               </div>
             </div>
+            {mcpData.claudeConnection.status !== "connected" && (
+              <div className="text-right">
+                <p className="text-xs text-secondary">
+                  {mcpData.claudeConnection.status === "disconnected"
+                    ? "请确保 Claude CLI 已安装"
+                    : "请检查 Claude CLI 配置"}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

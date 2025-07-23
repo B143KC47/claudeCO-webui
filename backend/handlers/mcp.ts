@@ -197,43 +197,61 @@ async function checkServerStatus(
   }
 }
 
-async function checkNativeClaudeServerStatus(): Promise<
-  "running" | "stopped" | "unknown"
-> {
+async function checkClaudeCodeConnection(): Promise<{
+  status: "connected" | "disconnected" | "error";
+  version?: string;
+  message?: string;
+}> {
   try {
-    // Check if native Claude MCP server is running
-    const cmd = new Deno.Command("ps", {
-      args: ["aux"],
+    // First check if Claude CLI is available
+    const versionCmd = new Deno.Command("claude", {
+      args: ["--version"],
       stdout: "piped",
       stderr: "piped",
     });
 
-    const { code, stdout } = await cmd.output();
+    const { code: versionCode, stdout: versionStdout, stderr: versionStderr } = await versionCmd.output();
 
-    if (code === 0) {
-      const output = new TextDecoder().decode(stdout);
-
-      // Check for various Claude MCP server process patterns
-      const claudeServerPatterns = [
-        "claude mcp serve",
-        "claude-mcp-server",
-        "claude_mcp_server",
-        "@anthropic-ai/claude-code",
-        "claude-code",
-      ];
-
-      for (const pattern of claudeServerPatterns) {
-        if (output.toLowerCase().includes(pattern.toLowerCase())) {
-          console.log(`Found Claude server process matching: ${pattern}`);
-          return "running";
-        }
-      }
+    if (versionCode !== 0) {
+      const errorOutput = new TextDecoder().decode(versionStderr);
+      console.error("Claude CLI not available:", errorOutput);
+      return {
+        status: "disconnected",
+        message: "Claude CLI not found. Please ensure claude is installed and in PATH."
+      };
     }
 
-    return "stopped";
+    const versionOutput = new TextDecoder().decode(versionStdout).trim();
+    console.log("Claude version:", versionOutput);
+
+    // Try to check if Claude can list MCP servers (this verifies it's fully functional)
+    const testCmd = new Deno.Command("claude", {
+      args: ["mcp", "list"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const { code: testCode } = await testCmd.output();
+
+    if (testCode === 0) {
+      return {
+        status: "connected",
+        version: versionOutput,
+        message: "Claude Code is connected and working properly"
+      };
+    } else {
+      return {
+        status: "error",
+        version: versionOutput,
+        message: "Claude CLI found but MCP commands not working"
+      };
+    }
   } catch (error) {
-    console.warn("Failed to check Claude native server status:", error);
-    return "unknown";
+    console.error("Error checking Claude Code connection:", error);
+    return {
+      status: "error",
+      message: `Failed to check connection: ${error instanceof Error ? error.message : "Unknown error"}`
+    };
   }
 }
 
@@ -362,12 +380,12 @@ export async function handleMCP(ctx: Context): Promise<Response> {
   if (pathname === "/api/mcp" && method === "GET") {
     try {
       const servers = await getMCPServers();
-      const nativeServerStatus = await checkNativeClaudeServerStatus();
+      const claudeConnection = await checkClaudeCodeConnection();
 
       return new Response(
         JSON.stringify({
           servers,
-          nativeServerStatus,
+          claudeConnection,
         }),
         {
           status: 200,

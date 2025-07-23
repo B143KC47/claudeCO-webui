@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Claude Code Web UI
 
 A web-based interface for the `claude` command line tool that provides streaming responses in a chat interface.
@@ -76,38 +80,6 @@ This project consists of three main components:
 - `DELETE /api/mcp/uninstall` - Uninstalls an MCP server
   - Request body: `{ serverName: string }`
 - `/*` - Serves static frontend files (in single binary mode)
-
-**Smithery.ai API Integration**:
-
-The backend supports real-time integration with the Smithery.ai registry to browse and install MCP servers. This feature can operate in two modes:
-
-1. **Real API Mode** (recommended): Uses authentic Smithery.ai API data
-   - Requires `SMITHERY_API_TOKEN` environment variable
-   - Fetches live server information from `https://registry.smithery.ai/servers`
-   - Provides up-to-date server listings, usage statistics, and success rates
-   - Supports search and category filtering
-
-2. **Mock Data Mode** (fallback): Uses simulated server data
-   - Automatically activated when `SMITHERY_API_TOKEN` is not set
-   - Provides sample servers for development and testing
-   - Issues a warning message to indicate mock mode usage
-
-**Setting up Smithery.ai API Integration**:
-
-1. Obtain an API token from Smithery.ai (visit [smithery.ai](https://smithery.ai) for details)
-2. Set the environment variable:
-   ```bash
-   export SMITHERY_API_TOKEN="your-smithery-api-token-here"
-   ```
-3. Restart the backend server
-4. The Smithery.ai browser in Settings → MCP tab will now show real server data
-
-**Features**:
-- **Automatic Fallback**: Gracefully falls back to mock data if API is unavailable
-- **Error Handling**: Handles authentication errors, rate limits, and network issues
-- **Search & Filter**: Supports text search and category-based filtering
-- **Real-time Data**: Shows current usage statistics and success rates
-- **Timeout Protection**: 10-second timeout prevents hanging requests
 
 ### Frontend (React)
 
@@ -239,6 +211,231 @@ fetch('http://server:8080/api/chat', {
 - **Device Tracking**: IP address and user agent logging
 - **Revocation**: Instant access revocation from Settings
 - **SQLite Storage**: Secure local database for device records
+
+
+### Overview
+
+YOU MUST USE THE FOLLOWING MCP TOOL FOR YOUR DEVELOPMENT
+
+
+#### 1. Context7 Tool
+
+A context management tool that helps Claude maintain and query extended context across conversations:
+
+```typescript
+// MCP tool definition
+{
+  name: "context7",
+  description: "Manage and query extended context with 7-level depth analysis",
+  inputSchema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["store", "retrieve", "analyze", "clear"],
+        description: "Action to perform on context"
+      },
+      key: {
+        type: "string",
+        description: "Context key for storage/retrieval"
+      },
+      value: {
+        type: "string",
+        description: "Context value (for store action)"
+      },
+      depth: {
+        type: "number",
+        minimum: 1,
+        maximum: 7,
+        description: "Analysis depth level"
+      }
+    },
+    required: ["action"]
+  }
+}
+```
+
+**Features**:
+- Store context with hierarchical keys
+- Retrieve context by key pattern
+- Analyze relationships between contexts
+- Support for 7 levels of context depth
+- Automatic context pruning for memory efficiency
+
+#### 2. Sequential Thinking Tool
+
+Enables Claude to perform structured, step-by-step reasoning:
+
+```typescript
+// MCP tool definition
+{
+  name: "sequential_thinking",
+  description: "Execute multi-step reasoning with validation and backtracking",
+  inputSchema: {
+    type: "object",
+    properties: {
+      steps: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            description: { type: "string" },
+            validation: { type: "string" },
+            fallback: { type: "string" }
+          }
+        },
+        description: "Sequence of thinking steps"
+      },
+      mode: {
+        type: "string",
+        enum: ["linear", "branching", "iterative"],
+        description: "Execution mode for steps"
+      },
+      maxIterations: {
+        type: "number",
+        description: "Maximum iterations for iterative mode"
+      }
+    },
+    required: ["steps"]
+  }
+}
+```
+
+**Features**:
+- Define reasoning steps with validation criteria
+- Support for branching logic paths
+- Automatic backtracking on validation failure
+- Iteration support for refinement
+- Step-by-step execution tracking
+
+
+
+### Adding New MCP Tools
+
+To add a new custom MCP tool:
+
+1. **Create Tool Definition**:
+```typescript
+// backend/mcp/tools/myTool.ts
+import { MCPTool } from "../types.ts";
+
+export const myTool: MCPTool = {
+  name: "my_tool",
+  description: "Tool description",
+  inputSchema: {
+    type: "object",
+    properties: {
+      // Define input parameters
+    },
+    required: ["param1"]
+  },
+  handler: async (params) => {
+    // Implement tool logic
+    return {
+      success: true,
+      result: "Tool output"
+    };
+  }
+};
+```
+
+2. **Register Tool**:
+```typescript
+// backend/mcp/tools/index.ts
+import { myTool } from "./myTool.ts";
+
+export const mcpTools = {
+  my_tool: myTool,
+  // ... other tools
+};
+```
+
+3. **Tool Integration**:
+The MCP server automatically exposes registered tools to Claude through the standard MCP protocol.
+
+### Tool Design Principles
+
+1. **Single Responsibility**: Each tool should have one clear purpose
+2. **Validation**: Validate inputs and provide clear error messages
+3. **Idempotency**: Tools should be safe to call multiple times
+4. **Performance**: Optimize for quick response times
+5. **Error Handling**: Graceful degradation with informative errors
+
+### Usage Examples
+
+#### Context7 Usage
+```javascript
+// Store context
+{
+  "action": "store",
+  "key": "project.requirements.auth",
+  "value": "JWT-based authentication required",
+  "depth": 3
+}
+
+// Retrieve context
+{
+  "action": "retrieve",
+  "key": "project.requirements.*",
+  "depth": 2
+}
+
+// Analyze relationships
+{
+  "action": "analyze",
+  "key": "project",
+  "depth": 7
+}
+```
+
+#### Sequential Thinking Usage
+```javascript
+{
+  "steps": [
+    {
+      "description": "Analyze current authentication method",
+      "validation": "method identified",
+      "fallback": "assume no authentication"
+    },
+    {
+      "description": "Design JWT implementation",
+      "validation": "all endpoints covered",
+      "fallback": "use basic auth"
+    },
+    {
+      "description": "Implement security measures",
+      "validation": "OWASP compliance",
+      "fallback": "apply standard security"
+    }
+  ],
+  "mode": "linear"
+}
+```
+
+### Backend Integration
+
+The MCP tools are integrated into the backend through:
+
+1. **Tool Discovery**: Claude queries available tools on startup
+2. **Tool Invocation**: Backend routes tool calls to appropriate handlers
+3. **Response Streaming**: Results streamed back to Claude
+4. **Error Handling**: Failures reported with context
+
+### Benefits of Custom MCP Tools
+
+1. **Tailored Functionality**: Tools designed for specific project needs
+2. **Better Performance**: No external API calls required
+3. **Enhanced Privacy**: Data stays within the application
+4. **Flexible Evolution**: Easy to modify and extend
+5. **Deep Integration**: Access to application state and context
+
+### Future Tool Ideas
+
+- **Code Analysis Tool**: Analyze codebase structure and dependencies
+- **Test Generation Tool**: Generate test cases based on code
+- **Documentation Tool**: Auto-generate docs from code
+- **Refactoring Tool**: Suggest and apply code improvements
+- **Dependency Tool**: Manage and analyze project dependencies
 
 ## Development
 

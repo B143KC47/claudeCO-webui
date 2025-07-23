@@ -44,7 +44,7 @@ function App() {
         
         // Schedule next check
         if (mounted) {
-          timeoutId = setTimeout(checkPendingDevices, 10000); // Check every 10 seconds
+          timeoutId = setTimeout(checkPendingDevices, 15000); // Check every 15 seconds
         }
       } catch (error) {
         console.error("Error checking pending devices:", error);
