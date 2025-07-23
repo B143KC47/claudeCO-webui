@@ -23,6 +23,16 @@ export interface DailyUsage {
   totalCost: number;
   totalTokens: number;
   requestCount: number;
+  hourlyBreakdown?: HourlyUsage[];
+  peakHour?: string;
+  averageCostPerHour?: number;
+}
+
+export interface HourlyUsage {
+  hour: number;
+  cost: number;
+  tokens: number;
+  requests: number;
 }
 
 export interface MonthlyUsage {

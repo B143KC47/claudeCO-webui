@@ -2,6 +2,7 @@ import { Context } from "hono";
 import {
   BillingFilters,
   DailyUsage,
+  HourlyUsage,
   MODEL_PRICING,
   ModelUsage,
   MonthlyUsage,
@@ -18,20 +19,22 @@ function getLogPaths(): string[] {
   if (!homeDir) return [];
 
   return [
-    `${homeDir}/.claude/logs`,
-    `${homeDir}/.config/claude/logs`,
-    `${homeDir}/AppData/Roaming/Claude/logs`,
-    `${homeDir}/Library/Application Support/Claude/logs`,
+    `${homeDir}/.claude/projects`,
+    `${homeDir}/.config/claude/projects`,
+    `${homeDir}/AppData/Roaming/Claude/projects`,
+    `${homeDir}/Library/Application Support/Claude/projects`,
   ];
 }
 
 interface ConversationLog {
-  id: string;
+  uuid?: string;
+  sessionId?: string;
   timestamp: string;
-  type: "system" | "assistant" | "result";
+  type: "summary" | "user" | "assistant" | "result" | "system";
   model?: string;
   message?: {
-    content?: Array<{ type: string; text?: string }>;
+    role?: string;
+    content?: string | Array<{ type: string; text?: string }>;
   };
   request?: {
     model?: string;
@@ -40,8 +43,10 @@ interface ConversationLog {
   totalOutputTokens?: number;
   cacheCreationInputTokens?: number;
   cacheReadInputTokens?: number;
+  totalCost?: number;
   cost?: number;
-  sessionId?: string;
+  summary?: string;
+  cwd?: string;
 }
 
 /**
@@ -60,7 +65,7 @@ export async function handleUsageRequest(c: Context) {
       return c.json({
         error: "No Claude conversation logs found",
         details:
-          "Usage tracking requires Claude CLI to be installed and used. Logs are typically stored in ~/.claude/logs or similar locations.",
+          "Claude Code automatically tracks usage when you send messages through the chat interface. Start using Claude to see your usage analytics here.",
         logPaths: getLogPaths(),
       }, 404);
     }
@@ -118,21 +123,35 @@ async function readConversationLogs(
         console.log(`Checking log directory: ${logPath}`);
 
         const files = [];
-        for await (const entry of Deno.readDir(logPath)) {
-          if (entry.isFile && entry.name.endsWith(".jsonl")) {
-            files.push(`${logPath}/${entry.name}`);
+        
+        // Scan project directories
+        for await (const projectEntry of Deno.readDir(logPath)) {
+          if (projectEntry.isDirectory) {
+            const projectPath = `${logPath}/${projectEntry.name}`;
+            try {
+              for await (const fileEntry of Deno.readDir(projectPath)) {
+                if (fileEntry.isFile && fileEntry.name.endsWith(".jsonl")) {
+                  files.push(`${projectPath}/${fileEntry.name}`);
+                }
+              }
+            } catch (e) {
+              // Skip inaccessible project directories
+            }
           }
         }
 
         console.log(`Found ${files.length} log files in ${logPath}`);
 
-        // Process files based on date filters
+        // Process all files (we'll filter by date within the logs)
         for (const file of files) {
-          const fileDate = extractDateFromFilename(file);
-          if (isWithinDateRange(fileDate, filters)) {
-            const fileLogs = await readJSONLFile(file);
-            logs.push(...fileLogs);
-          }
+          const fileLogs = await readJSONLFile(file);
+          // Filter logs by date
+          const filteredLogs = fileLogs.filter(log => {
+            if (!log.timestamp) return false;
+            const logDate = log.timestamp.split("T")[0];
+            return isWithinDateRange(logDate, filters);
+          });
+          logs.push(...filteredLogs);
         }
       }
     } catch (error) {
@@ -152,7 +171,8 @@ async function readConversationLogs(
 }
 
 function extractDateFromFilename(filename: string): string {
-  // Extract date from filename pattern like "2024-12-15.jsonl"
+  // For UUID-based filenames, we'll need to read the file to get dates
+  // Return today's date as a fallback
   const match = filename.match(/(\d{4}-\d{2}-\d{2})/);
   return match ? match[1] : new Date().toISOString().split("T")[0];
 }
@@ -183,9 +203,19 @@ async function readJSONLFile(filepath: string): Promise<ConversationLog[]> {
       try {
         const log = JSON.parse(line);
 
-        // Calculate cost if not present
-        if (!log.cost && log.model) {
-          log.cost = calculateCost(log);
+        // Skip non-relevant log types
+        if (log.type === "summary" || log.type === "user") {
+          continue;
+        }
+        
+        // Use totalCost if available, otherwise calculate
+        if (!log.cost) {
+          log.cost = log.totalCost || calculateCost(log);
+        }
+
+        // Ensure we have a timestamp
+        if (!log.timestamp) {
+          continue;
         }
 
         logs.push(log);
@@ -286,12 +316,24 @@ function groupByDays(
       : [];
 
     const modelUsage = aggregateModelUsage(dayLogs);
+    const hourlyBreakdown = calculateHourlyBreakdown(dayLogs);
+    const totalCost = dayLogs.reduce((sum, log) => sum + (log.cost || 0), 0);
+    
+    // Find peak hour
+    let peakHour = "";
+    let maxHourCost = 0;
+    hourlyBreakdown.forEach((hour) => {
+      if (hour.cost > maxHourCost) {
+        maxHourCost = hour.cost;
+        peakHour = `${hour.hour}:00`;
+      }
+    });
 
     daily.push({
       date,
       windows,
       models: modelUsage,
-      totalCost: dayLogs.reduce((sum, log) => sum + (log.cost || 0), 0),
+      totalCost,
       totalTokens: dayLogs.reduce(
         (sum, log) =>
           sum + (log.totalInputTokens || 0) + (log.totalOutputTokens || 0) +
@@ -299,11 +341,48 @@ function groupByDays(
         0,
       ),
       requestCount: dayLogs.length,
+      hourlyBreakdown,
+      peakHour,
+      averageCostPerHour: totalCost / 24,
     });
   }
 
   // Sort by date descending
   return daily.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function calculateHourlyBreakdown(logs: ConversationLog[]): HourlyUsage[] {
+  const hourMap = new Map<number, { cost: number; tokens: number; requests: number }>();
+  
+  // Initialize all hours
+  for (let hour = 0; hour < 24; hour++) {
+    hourMap.set(hour, { cost: 0, tokens: 0, requests: 0 });
+  }
+  
+  // Aggregate by hour
+  for (const log of logs) {
+    const hour = new Date(log.timestamp).getHours();
+    const hourData = hourMap.get(hour)!;
+    
+    hourData.cost += log.cost || 0;
+    hourData.tokens += (log.totalInputTokens || 0) + (log.totalOutputTokens || 0) +
+      (log.cacheCreationInputTokens || 0) + (log.cacheReadInputTokens || 0);
+    hourData.requests += 1;
+  }
+  
+  // Convert to array
+  const hourlyUsage: HourlyUsage[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    const data = hourMap.get(hour)!;
+    hourlyUsage.push({
+      hour,
+      cost: data.cost,
+      tokens: data.tokens,
+      requests: data.requests,
+    });
+  }
+  
+  return hourlyUsage;
 }
 
 function groupByWindows(logs: ConversationLog[]): TimeWindow[] {
