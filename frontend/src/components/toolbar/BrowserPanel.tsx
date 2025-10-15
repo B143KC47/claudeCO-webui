@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -7,6 +7,8 @@ import {
   MagnifyingGlassIcon,
   InformationCircleIcon,
   XCircleIcon,
+  CheckIcon,
+  ClipboardIcon,
 } from "@heroicons/react/24/outline";
 
 // Helper function to detect localhost patterns
@@ -49,6 +51,109 @@ function copyToClipboard(text: string): void {
   });
 }
 
+// Server option interface
+interface ServerOption {
+  id: string;
+  name: string;
+  icon: string;
+  command: string;
+  difficulty: "easy" | "medium" | "advanced";
+  platforms: ("windows" | "mac" | "linux")[];
+  speed: "fast" | "fastest" | "normal";
+  needsInstall: boolean;
+  description: string;
+  tip?: string;
+}
+
+// Server options configuration
+const serverOptions: ServerOption[] = [
+  {
+    id: "python",
+    name: "Python HTTP Server",
+    icon: "🐍",
+    command: "python -m http.server 8000",
+    difficulty: "easy",
+    platforms: ["windows", "mac", "linux"],
+    speed: "normal",
+    needsInstall: false,
+    description: "Built-in Python server, works everywhere",
+    tip: "Run in the directory containing your HTML files",
+  },
+  {
+    id: "nodejs",
+    name: "Node.js HTTP Server",
+    icon: "🟢",
+    command: "npx http-server -p 8000",
+    difficulty: "easy",
+    platforms: ["windows", "mac", "linux"],
+    speed: "fast",
+    needsInstall: false,
+    description: "Popular, fast, and reliable",
+    tip: "npx downloads and runs without installation",
+  },
+  {
+    id: "bun",
+    name: "Bun Dev Server",
+    icon: "🥟",
+    command: "bunx serve -p 8000",
+    difficulty: "easy",
+    platforms: ["mac", "linux"],
+    speed: "fastest",
+    needsInstall: true,
+    description: "Modern, blazing fast runtime",
+    tip: "Install: curl -fsSL https://bun.sh/install | bash",
+  },
+  {
+    id: "vite",
+    name: "Vite Preview Server",
+    icon: "⚡",
+    command: "npx vite preview --port 8000",
+    difficulty: "medium",
+    platforms: ["windows", "mac", "linux"],
+    speed: "fastest",
+    needsInstall: false,
+    description: "For Vite-built projects",
+    tip: "First build with: npm run build",
+  },
+  {
+    id: "deno",
+    name: "Deno File Server",
+    icon: "🦕",
+    command:
+      "deno run --allow-net --allow-read https://deno.land/std/http/file_server.ts",
+    difficulty: "medium",
+    platforms: ["windows", "mac", "linux"],
+    speed: "fast",
+    needsInstall: true,
+    description: "Secure, modern runtime",
+    tip: "Install: curl -fsSL https://deno.land/install.sh | sh",
+  },
+  {
+    id: "caddy",
+    name: "Caddy Server",
+    icon: "🔒",
+    command: "caddy file-server --listen :8000",
+    difficulty: "advanced",
+    platforms: ["windows", "mac", "linux"],
+    speed: "fast",
+    needsInstall: true,
+    description: "Auto HTTPS, production-ready",
+    tip: "Install: brew install caddy (Mac) or download from caddyserver.com",
+  },
+  {
+    id: "php",
+    name: "PHP Built-in Server",
+    icon: "🐘",
+    command: "php -S localhost:8000",
+    difficulty: "easy",
+    platforms: ["windows", "mac", "linux"],
+    speed: "normal",
+    needsInstall: false,
+    description: "For PHP projects",
+    tip: "PHP must be installed on your system",
+  },
+];
+
 export function BrowserPanel() {
   const [url, setUrl] = useState("https://react.dev");
   const [inputUrl, setInputUrl] = useState("https://react.dev");
@@ -59,7 +164,25 @@ export function BrowserPanel() {
     show: boolean;
     path: string;
   } | null>(null);
+  const [selectedTab, setSelectedTab] = useState<"quick" | "all" | "advanced">(
+    "quick",
+  );
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Auto-reset copied state after 2 seconds
+  useEffect(() => {
+    if (copiedCommand) {
+      const timer = setTimeout(() => setCopiedCommand(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copiedCommand]);
+
+  // Enhanced copy handler with visual feedback
+  const handleCopy = (command: string) => {
+    copyToClipboard(command);
+    setCopiedCommand(command);
+  };
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,9 +362,9 @@ export function BrowserPanel() {
         </div>
       )}
 
-      {/* File URL Error Panel */}
+      {/* File URL Error Panel - Enhanced with Multiple Options */}
       {fileUrlError?.show && (
-        <div className="glass-card rounded-lg border-2 border-red-500/50 p-4 flex flex-col gap-3 flex-shrink-0">
+        <div className="glass-card rounded-lg border-2 border-red-500/50 p-4 flex flex-col gap-3 flex-shrink-0 max-h-[70vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-start gap-3">
             <XCircleIcon className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
@@ -250,8 +373,8 @@ export function BrowserPanel() {
                 Cannot Load Local File
               </h3>
               <p className="text-tertiary text-xs mt-1">
-                Browsers block file:// URLs in iframes for security. Use a local
-                server instead.
+                Browsers block file:// URLs in iframes for security. Choose a
+                local server below.
               </p>
             </div>
             <button
@@ -268,57 +391,196 @@ export function BrowserPanel() {
             {fileUrlError.path}
           </div>
 
-          {/* Solutions */}
+          {/* Tab Selector */}
+          <div className="flex gap-1 border-b border-tertiary/20">
+            {[
+              { key: "quick", label: "⚡ Quick Start" },
+              { key: "all", label: "📋 All Options" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() =>
+                  setSelectedTab(tab.key as "quick" | "all" | "advanced")
+                }
+                className={`px-4 py-2 text-xs font-medium transition-colors ${
+                  selectedTab === tab.key
+                    ? "border-b-2 border-accent text-accent"
+                    : "text-tertiary hover:text-secondary"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-secondary">Solutions:</p>
-
-            {/* Option 1: Python */}
-            <div className="glass-card p-3 space-y-2">
-              <p className="text-xs text-primary font-medium">
-                1. Start Python HTTP Server
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs text-tertiary bg-black-primary/30 px-2 py-1 rounded font-mono">
-                  python -m http.server 8000
-                </code>
+            {selectedTab === "quick" && (
+              <>
+                <p className="text-xs text-secondary font-medium mb-3">
+                  💡 Recommended for you:
+                </p>
+                {/* Show top 2 easiest options */}
+                {serverOptions.slice(0, 2).map((option) => (
+                  <div
+                    key={option.id}
+                    className="glass-card p-3 space-y-2 border border-accent/30"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{option.icon}</span>
+                        <span className="text-xs text-primary font-medium">
+                          {option.name}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-medium rounded border ${
+                          option.difficulty === "easy"
+                            ? "bg-green-500/20 text-green-500 border-green-500/30"
+                            : option.difficulty === "medium"
+                              ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                              : "bg-red-500/20 text-red-500 border-red-500/30"
+                        }`}
+                      >
+                        {option.difficulty.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-tertiary">
+                      {option.description}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs text-tertiary bg-black-primary/30 px-2 py-1 rounded font-mono overflow-x-auto">
+                        {option.command}
+                      </code>
+                      <button
+                        onClick={() => handleCopy(option.command)}
+                        className={`flex items-center gap-1 px-3 py-1 text-xs rounded transition-all flex-shrink-0 ${
+                          copiedCommand === option.command
+                            ? "bg-green-500 text-white"
+                            : "glass-button text-accent hover:text-accent/80"
+                        }`}
+                      >
+                        {copiedCommand === option.command ? (
+                          <>
+                            <CheckIcon className="w-3 h-3" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardIcon className="w-3 h-3" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {option.tip && (
+                      <p className="text-xs text-tertiary flex items-start gap-1">
+                        <span>💡</span>
+                        <span>{option.tip}</span>
+                      </p>
+                    )}
+                  </div>
+                ))}
                 <button
-                  onClick={() => copyToClipboard("python -m http.server 8000")}
-                  className="text-xs text-accent hover:text-accent/80 transition-colors px-2 py-1 glass-button rounded"
+                  onClick={() => setSelectedTab("all")}
+                  className="w-full text-xs text-accent hover:text-accent/80 py-2 glass-button rounded transition-colors"
                 >
-                  Copy
+                  View All 7 Server Options →
                 </button>
-              </div>
-            </div>
+              </>
+            )}
 
-            {/* Option 2: Node.js */}
-            <div className="glass-card p-3 space-y-2">
-              <p className="text-xs text-primary font-medium">
-                2. Start Node.js HTTP Server
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs text-tertiary bg-black-primary/30 px-2 py-1 rounded font-mono">
-                  npx http-server -p 8000
-                </code>
-                <button
-                  onClick={() => copyToClipboard("npx http-server -p 8000")}
-                  className="text-xs text-accent hover:text-accent/80 transition-colors px-2 py-1 glass-button rounded"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
+            {selectedTab === "all" && (
+              <>
+                <p className="text-xs text-secondary font-medium mb-3">
+                  Choose any server option:
+                </p>
+                {serverOptions.map((option) => (
+                  <div key={option.id} className="glass-card p-3 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{option.icon}</span>
+                        <span className="text-xs text-primary font-medium">
+                          {option.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-medium rounded border ${
+                            option.difficulty === "easy"
+                              ? "bg-green-500/20 text-green-500 border-green-500/30"
+                              : option.difficulty === "medium"
+                                ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                                : "bg-red-500/20 text-red-500 border-red-500/30"
+                          }`}
+                        >
+                          {option.difficulty.toUpperCase()}
+                        </span>
+                        {option.speed === "fastest" && (
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded border bg-purple-500/20 text-purple-500 border-purple-500/30">
+                            FASTEST
+                          </span>
+                        )}
+                        {!option.needsInstall && (
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded border bg-blue-500/20 text-blue-500 border-blue-500/30">
+                            NO INSTALL
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-tertiary">
+                      {option.description}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs text-tertiary bg-black-primary/30 px-2 py-1 rounded font-mono overflow-x-auto">
+                        {option.command}
+                      </code>
+                      <button
+                        onClick={() => handleCopy(option.command)}
+                        className={`flex items-center gap-1 px-3 py-1 text-xs rounded transition-all flex-shrink-0 ${
+                          copiedCommand === option.command
+                            ? "bg-green-500 text-white"
+                            : "glass-button text-accent hover:text-accent/80"
+                        }`}
+                      >
+                        {copiedCommand === option.command ? (
+                          <>
+                            <CheckIcon className="w-3 h-3" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardIcon className="w-3 h-3" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {option.tip && (
+                      <p className="text-xs text-tertiary flex items-start gap-1">
+                        <span>💡</span>
+                        <span>{option.tip}</span>
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
 
-            {/* Option 3: Usage */}
-            <div className="glass-card p-3 space-y-1">
-              <p className="text-xs text-primary font-medium">
-                3. Then navigate to:
-              </p>
-              <code className="text-xs text-accent block bg-black-primary/30 px-2 py-1 rounded font-mono">
-                http://localhost:8000
-              </code>
-              <p className="text-xs text-tertiary mt-1">
-                Run the command in the directory containing your HTML file
-              </p>
+            {/* Usage Instructions */}
+            <div className="glass-card p-3 space-y-1 bg-accent/5 border border-accent/20">
+              <p className="text-xs text-primary font-medium">📖 How to use:</p>
+              <ol className="text-xs text-tertiary space-y-1 ml-4 list-decimal">
+                <li>Copy a command above</li>
+                <li>Open terminal in your file's directory</li>
+                <li>Paste and run the command</li>
+                <li>
+                  Navigate to{" "}
+                  <code className="text-accent bg-black-primary/30 px-1 rounded">
+                    http://localhost:8000
+                  </code>
+                </li>
+              </ol>
             </div>
           </div>
         </div>
