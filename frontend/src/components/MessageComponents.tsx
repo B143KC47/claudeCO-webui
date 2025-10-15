@@ -183,14 +183,18 @@ const TOOL_STYLES: Record<
 
 interface ChatMessageComponentProps {
   message: ChatMessage;
+  grouping?: "first" | "middle" | "last" | "single" | false;
 }
 
-export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
+export function ChatMessageComponent({
+  message,
+  grouping = false,
+}: ChatMessageComponentProps) {
   const { t } = useLanguage();
   const isUser = message.role === "user";
-  const colorScheme = isUser
-    ? "bg-gradient-primary text-primary"
-    : "bg-black-quaternary text-primary border-accent";
+
+  // iOS-style colors
+  const colorScheme = isUser ? "ios-bubble-user" : "ios-bubble-assistant";
 
   // Check if assistant message contains thinking patterns
   const isThinking =
@@ -199,6 +203,12 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
       message.content.toLowerCase().includes("analyzing") ||
       message.content.toLowerCase().includes("considering") ||
       message.content.toLowerCase().includes("i'll examine"));
+
+  // Show tail only on last message in a group or single messages
+  const showTail = grouping === "last" || grouping === "single" || !grouping;
+
+  // Show sender label and timestamp only on first message in a group or single messages
+  const showHeader = grouping === "first" || grouping === "single" || !grouping;
 
   return (
     <MessageContainer
@@ -210,40 +220,40 @@ export function ChatMessageComponent({ message }: ChatMessageComponentProps) {
             ? "bg-gradient-to-br from-blue-900/20 to-cyan-900/20 text-blue-300 border-blue-500/30"
             : colorScheme
       }
+      isGrouped={grouping}
+      showTail={showTail}
     >
-      <div className="mb-2 flex items-center justify-between gap-4">
-        <div
-          className={`text-xs font-semibold opacity-90 flex items-center gap-2 ${
-            isUser
-              ? "text-primary"
-              : isThinking
-                ? "text-blue-400"
-                : "text-accent"
-          }`}
-        >
-          {isUser ? (
-            t("message.user")
-          ) : (
-            <>
-              {isThinking && (
-                <span className="w-5 h-5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg animate-pulse">
-                  💭
-                </span>
-              )}
-              {t("message.claude")}
-            </>
-          )}
+      {showHeader && (
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <div
+            className={`text-[13px] font-semibold opacity-80 flex items-center gap-2 ${
+              isUser ? "text-white" : "text-secondary"
+            }`}
+          >
+            {isUser ? (
+              t("message.user")
+            ) : (
+              <>
+                {isThinking && (
+                  <span className="w-5 h-5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg animate-pulse">
+                    💭
+                  </span>
+                )}
+                {t("message.claude")}
+              </>
+            )}
+          </div>
+          <TimestampComponent
+            timestamp={message.timestamp}
+            className={`text-[11px] opacity-60 ${
+              isUser ? "text-white" : "text-secondary"
+            }`}
+          />
         </div>
-        <TimestampComponent
-          timestamp={message.timestamp}
-          className={`text-xs opacity-70 ${
-            isUser ? "text-primary" : "text-tertiary"
-          }`}
-        />
-      </div>
-      <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed">
+      )}
+      <div className="whitespace-pre-wrap text-[15px] leading-relaxed break-words">
         {message.content}
-      </pre>
+      </div>
     </MessageContainer>
   );
 }
@@ -508,17 +518,33 @@ export function LoadingComponent() {
   return (
     <MessageContainer
       alignment="left"
-      colorScheme="bg-gradient-to-br from-blue-900/20 to-cyan-900/20 text-blue-300 border-blue-500/30"
+      colorScheme="ios-bubble-assistant animate-fade-in"
+      showTail={false}
     >
-      <div className="text-xs font-semibold mb-2 opacity-90 text-blue-400 flex items-center gap-2">
+      <div className="text-[13px] font-semibold mb-2 opacity-80 text-secondary flex items-center gap-2">
         <span className="w-5 h-5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg animate-pulse">
           💭
         </span>
         Claude
       </div>
-      <div className="flex items-center gap-2 text-sm">
-        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <span className="animate-pulse text-blue-400">Thinking...</span>
+      <div className="flex items-center gap-3 text-[15px]">
+        <div className="flex gap-1">
+          <div
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ animationDelay: "0s", background: "#0A7AFF" }}
+          ></div>
+          <div
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ animationDelay: "0.15s", background: "#0A7AFF" }}
+          ></div>
+          <div
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ animationDelay: "0.3s", background: "#0A7AFF" }}
+          ></div>
+        </div>
+        <span className="text-secondary font-medium animate-pulse">
+          Thinking
+        </span>
       </div>
     </MessageContainer>
   );

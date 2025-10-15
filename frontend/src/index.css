@@ -688,6 +688,151 @@ body {
   animation: git-pulse 1.5s ease-in-out infinite;
 }
 
+/* iOS 26 Message Bubble Styles */
+.ios-message-bubble {
+  position: relative;
+  max-width: 280px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* iOS Message Bubble Tails */
+.message-bubble-tail-left::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: inherit;
+  border-bottom-right-radius: 16px 14px;
+}
+
+.message-bubble-tail-left::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -10px;
+  width: 10px;
+  height: 20px;
+  background: var(--bg-primary);
+  border-bottom-right-radius: 10px;
+}
+
+.message-bubble-tail-right::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: inherit;
+  border-bottom-left-radius: 16px 14px;
+}
+
+.message-bubble-tail-right::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -10px;
+  width: 10px;
+  height: 20px;
+  background: var(--bg-primary);
+  border-bottom-left-radius: 10px;
+}
+
+/* iOS Colors */
+.ios-bubble-user {
+  background: #0a7aff;
+  color: #ffffff;
+}
+
+.ios-bubble-assistant {
+  background: #e5e5ea;
+  color: #000000;
+}
+
+.dark .ios-bubble-user {
+  background: #0984ff;
+  color: #ffffff;
+}
+
+.dark .ios-bubble-assistant {
+  background: #2c2c2e;
+  color: #ffffff;
+}
+
+/* iOS Glass Effect */
+.ios-glass-effect {
+  background: rgba(26, 26, 26, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ios-glass-input {
+  background: rgba(26, 26, 26, 0.65);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Message Grouping Spacing */
+.message-group-first {
+  margin-bottom: 2px;
+}
+
+.message-group-middle {
+  margin-bottom: 2px;
+}
+
+.message-group-last {
+  margin-bottom: 16px;
+}
+
+.message-single {
+  margin-bottom: 16px;
+}
+
+/* iOS Spring Animation */
+@keyframes ios-spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-ios-spring {
+  animation: ios-spring-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* iOS Button Press Animation */
+.ios-button-press:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* iOS Touch Momentum Scroll */
+.ios-momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
 /* Better scrollbar for git panels */
 .git-scrollbar::-webkit-scrollbar {
   width: 6px;

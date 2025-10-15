@@ -4,6 +4,7 @@ import {
   TrashIcon,
   DocumentDuplicateIcon,
   XMarkIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 
 interface TerminalEntry {
@@ -11,6 +12,29 @@ interface TerminalEntry {
   type: "command" | "output" | "error";
   content: string;
   timestamp: Date;
+}
+
+interface SystemInfo {
+  username: string;
+  hostname: string;
+  platform: string;
+  homeDirectory: string;
+  currentWorkingDirectory: string;
+  isWSL: boolean;
+}
+
+interface TerminalSession {
+  id: string;
+  name: string;
+  entries: TerminalEntry[];
+  commandHistory: string[];
+  historyIndex: number;
+  isExecuting: boolean;
+  currentRequestId: string | null;
+  currentWorkingDirectory: string;
+  currentCommand: string;
+  systemInfo: SystemInfo | null;
+  createdAt: Date;
 }
 
 interface TerminalPanelProps {
@@ -31,92 +55,265 @@ interface TerminalStreamResponse {
   error?: string;
 }
 
-interface SystemInfo {
-  username: string;
-  hostname: string;
-  platform: string;
-  homeDirectory: string;
-  currentWorkingDirectory: string;
-  isWSL: boolean;
-}
+// Maximum number of terminal sessions allowed
+const MAX_TERMINALS = 6;
+
+// Helper function to generate unique session ID
+const generateSessionId = () =>
+  `terminal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+// Helper function to create a new terminal session
+const createInitialSession = (
+  workingDir: string,
+  sessionNumber: number,
+): TerminalSession => ({
+  id: generateSessionId(),
+  name: `Terminal ${sessionNumber}`,
+  entries: [],
+  commandHistory: [],
+  historyIndex: -1,
+  isExecuting: false,
+  currentRequestId: null,
+  currentWorkingDirectory: workingDir,
+  currentCommand: "",
+  systemInfo: null,
+  createdAt: new Date(),
+});
 
 export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
-  const [entries, setEntries] = useState<TerminalEntry[]>([]);
-  const [currentCommand, setCurrentCommand] = useState("");
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
-  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [currentWorkingDirectory, setCurrentWorkingDirectory] =
-    useState(workingDirectory);
+  // Multi-session state management
+  const [sessions, setSessions] = useState<TerminalSession[]>(() => [
+    createInitialSession(workingDirectory, 1),
+  ]);
+  const [activeSessionId, setActiveSessionId] = useState<string>(
+    () => sessions[0]?.id || "",
+  );
+
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new entries are added
+  // Get active session
+  const activeSession =
+    sessions.find((s) => s.id === activeSessionId) || sessions[0];
+
+  // Helper function to update active session
+  const updateActiveSession = (updates: Partial<TerminalSession>) => {
+    setSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === activeSessionId ? { ...session, ...updates } : session,
+      ),
+    );
+  };
+
+  // Create new terminal session
+  const createNewSession = () => {
+    if (sessions.length >= MAX_TERMINALS) {
+      return;
+    }
+
+    const newSession = createInitialSession(
+      workingDirectory,
+      sessions.length + 1,
+    );
+    setSessions((prev) => [...prev, newSession]);
+    setActiveSessionId(newSession.id);
+
+    // Load system info for new session
+    loadSystemInfo(newSession.id);
+  };
+
+  // Close terminal session
+  const closeSession = (sessionId: string) => {
+    const session = sessions.find((s) => s.id === sessionId);
+
+    // Confirm if command is executing
+    if (session?.isExecuting) {
+      const confirmed = window.confirm(
+        "A command is currently running in this terminal. Are you sure you want to close it?",
+      );
+      if (!confirmed) return;
+
+      // Abort the running command
+      if (session.currentRequestId) {
+        fetch(`/api/terminal/abort/${session.currentRequestId}`, {
+          method: "POST",
+        }).catch(console.error);
+      }
+    }
+
+    // Don't allow closing the last terminal
+    if (sessions.length === 1) {
+      // Instead of closing, clear the terminal
+      setSessions([createInitialSession(workingDirectory, 1)]);
+      setActiveSessionId(sessions[0].id);
+      return;
+    }
+
+    // Remove session
+    const newSessions = sessions.filter((s) => s.id !== sessionId);
+    setSessions(newSessions);
+
+    // Update active session if needed
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(newSessions[0].id);
+    }
+  };
+
+  // Auto-scroll to bottom when new entries are added to active session
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [entries]);
+  }, [activeSession?.entries, activeSessionId]);
 
   // Focus terminal input when clicked
   const handleTerminalClick = () => {
     inputRef.current?.focus();
   };
 
-  // Load system info on component mount
-  useEffect(() => {
-    const loadSystemInfo = async () => {
-      try {
-        const response = await fetch("/api/terminal/info");
-        if (response.ok) {
-          const info = await response.json();
-          setSystemInfo(info);
+  // Load system info for a specific session
+  const loadSystemInfo = async (sessionId: string) => {
+    try {
+      const response = await fetch("/api/terminal/info");
+      if (response.ok) {
+        const info = await response.json();
 
-          // Only use system info directory if user hasn't selected a specific project directory
-          // workingDirectory prop takes priority over system currentWorkingDirectory
-          const effectiveWorkingDirectory =
-            workingDirectory && workingDirectory !== "~"
-              ? workingDirectory
-              : info.currentWorkingDirectory || workingDirectory;
+        setSessions((prevSessions) =>
+          prevSessions.map((session) => {
+            if (session.id !== sessionId) return session;
 
-          // Update working directory only if we don't have a user-specified one
-          if (!workingDirectory || workingDirectory === "~") {
-            setCurrentWorkingDirectory(effectiveWorkingDirectory);
-          }
+            // Only use system info directory if user hasn't selected a specific project directory
+            const effectiveWorkingDirectory =
+              workingDirectory && workingDirectory !== "~"
+                ? workingDirectory
+                : info.currentWorkingDirectory || workingDirectory;
 
-          // Add welcome message after system info is loaded
-          const welcomeEntry: TerminalEntry = {
+            // Update working directory only if we don't have a user-specified one
+            const finalWorkingDirectory =
+              !workingDirectory || workingDirectory === "~"
+                ? effectiveWorkingDirectory
+                : session.currentWorkingDirectory;
+
+            // Add welcome message
+            const welcomeEntry: TerminalEntry = {
+              id: Date.now(),
+              type: "output",
+              content: `Welcome to ${info.platform === "linux" && info.isWSL ? "WSL" : info.platform} Terminal\nUser: ${info.username}@${info.hostname}\nWorking Directory: ${finalWorkingDirectory}\n`,
+              timestamp: new Date(),
+            };
+
+            return {
+              ...session,
+              systemInfo: info,
+              currentWorkingDirectory: finalWorkingDirectory,
+              entries: [welcomeEntry],
+            };
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to load system info:", error);
+
+      setSessions((prevSessions) =>
+        prevSessions.map((session) => {
+          if (session.id !== sessionId) return session;
+
+          const fallbackEntry: TerminalEntry = {
             id: Date.now(),
             type: "output",
-            content: `Welcome to ${info.platform === "linux" && info.isWSL ? "WSL" : info.platform} Terminal\nUser: ${info.username}@${info.hostname}\nWorking Directory: ${currentWorkingDirectory}\n`,
+            content: `Welcome to Terminal\nWorking Directory: ${workingDirectory}\n`,
             timestamp: new Date(),
           };
-          setEntries([welcomeEntry]);
+
+          return {
+            ...session,
+            entries: [fallbackEntry],
+          };
+        }),
+      );
+    }
+  };
+
+  // Load system info on component mount for initial session
+  useEffect(() => {
+    if (sessions.length > 0 && sessions[0]) {
+      loadSystemInfo(sessions[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Focus input when switching sessions
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [activeSessionId]);
+
+  // Keyboard shortcuts for terminal management
+  useEffect(() => {
+    const handleKeyboardShortcuts = (e: KeyboardEvent) => {
+      // Ctrl+Shift+T: New terminal
+      if (e.ctrlKey && e.shiftKey && e.key === "T") {
+        e.preventDefault();
+        if (sessions.length < MAX_TERMINALS) {
+          createNewSession();
         }
-      } catch (error) {
-        console.error("Failed to load system info:", error);
-        // Add fallback welcome message
-        const fallbackEntry: TerminalEntry = {
-          id: Date.now(),
-          type: "output",
-          content: `Welcome to Terminal\nWorking Directory: ${workingDirectory}\n`,
-          timestamp: new Date(),
-        };
-        setEntries([fallbackEntry]);
+        return;
+      }
+
+      // Ctrl+Shift+W: Close terminal
+      if (e.ctrlKey && e.shiftKey && e.key === "W") {
+        e.preventDefault();
+        closeSession(activeSessionId);
+        return;
+      }
+
+      // Ctrl+Tab: Next terminal
+      if (e.ctrlKey && e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        const currentIndex = sessions.findIndex(
+          (s) => s.id === activeSessionId,
+        );
+        const nextIndex = (currentIndex + 1) % sessions.length;
+        setActiveSessionId(sessions[nextIndex].id);
+        return;
+      }
+
+      // Ctrl+Shift+Tab: Previous terminal
+      if (e.ctrlKey && e.shiftKey && e.key === "Tab") {
+        e.preventDefault();
+        const currentIndex = sessions.findIndex(
+          (s) => s.id === activeSessionId,
+        );
+        const prevIndex =
+          currentIndex === 0 ? sessions.length - 1 : currentIndex - 1;
+        setActiveSessionId(sessions[prevIndex].id);
+        return;
+      }
+
+      // Ctrl+1 through Ctrl+6: Switch to terminal N
+      if (e.ctrlKey && e.key >= "1" && e.key <= "6") {
+        e.preventDefault();
+        const terminalIndex = parseInt(e.key) - 1;
+        if (terminalIndex < sessions.length) {
+          setActiveSessionId(sessions[terminalIndex].id);
+        }
+        return;
       }
     };
 
-    loadSystemInfo();
-  }, [workingDirectory]);
+    window.addEventListener("keydown", handleKeyboardShortcuts);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcuts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, activeSessionId]);
 
   // Update working directory when prop changes
   useEffect(() => {
     // Always update when workingDirectory prop changes - this ensures user selection takes priority
     if (workingDirectory) {
-      setCurrentWorkingDirectory(workingDirectory);
+      updateActiveSession({ currentWorkingDirectory: workingDirectory });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workingDirectory]);
 
   // Detect and handle directory-changing commands
@@ -129,8 +326,8 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     // Handle 'pwd' command output
     if (trimmedCommand === "pwd" && output.trim().startsWith("/")) {
       const newDir = output.trim();
-      if (newDir !== currentWorkingDirectory) {
-        setCurrentWorkingDirectory(newDir);
+      if (newDir !== activeSession.currentWorkingDirectory) {
+        updateActiveSession({ currentWorkingDirectory: newDir });
       }
       return;
     }
@@ -145,26 +342,32 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
 
   // Generate terminal title based on system info
   const getTerminalTitle = () => {
+    const systemInfo = activeSession.systemInfo;
+    const currentWorkingDirectory = activeSession.currentWorkingDirectory;
+
     if (!systemInfo) {
-      return `Terminal - ${currentWorkingDirectory}`;
+      return `${activeSession.name} - ${currentWorkingDirectory}`;
     }
 
     const platform = systemInfo.platform;
     const wsuffix = systemInfo.isWSL ? " (WSL)" : "";
 
     if (platform === "windows") {
-      return `Windows Terminal${wsuffix} - ${currentWorkingDirectory}`;
+      return `${activeSession.name}${wsuffix} - ${currentWorkingDirectory}`;
     } else if (platform === "darwin") {
-      return `macOS Terminal - ${currentWorkingDirectory}`;
+      return `${activeSession.name} - ${currentWorkingDirectory}`;
     } else if (platform === "linux") {
-      return `Linux Terminal${wsuffix} - ${currentWorkingDirectory}`;
+      return `${activeSession.name}${wsuffix} - ${currentWorkingDirectory}`;
     } else {
-      return `Terminal - ${currentWorkingDirectory}`;
+      return `${activeSession.name} - ${currentWorkingDirectory}`;
     }
   };
 
   // Generate prompt based on system info
   const getPrompt = () => {
+    const systemInfo = activeSession.systemInfo;
+    const currentWorkingDirectory = activeSession.currentWorkingDirectory;
+
     const username = systemInfo?.username || "user";
     const hostname = systemInfo?.hostname || "claude";
 
@@ -198,8 +401,10 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
   // Execute command via backend API
   const executeCommand = async (command: string): Promise<void> => {
     const requestId = `terminal-${Date.now()}-${Math.random()}`;
-    setCurrentRequestId(requestId);
-    setIsExecuting(true);
+    updateActiveSession({
+      currentRequestId: requestId,
+      isExecuting: true,
+    });
 
     // Store the command for directory tracking
     const originalCommand = command.trim();
@@ -207,7 +412,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     try {
       const terminalRequest: TerminalRequest = {
         command: originalCommand,
-        workingDirectory: currentWorkingDirectory,
+        workingDirectory: activeSession.currentWorkingDirectory,
         requestId,
         shell: "bash", // Use bash for WSL compatibility
       };
@@ -282,10 +487,14 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         timestamp: new Date(),
       };
 
-      setEntries((prev) => [...prev, errorEntry]);
+      updateActiveSession({
+        entries: [...activeSession.entries, errorEntry],
+      });
     } finally {
-      setIsExecuting(false);
-      setCurrentRequestId(null);
+      updateActiveSession({
+        isExecuting: false,
+        currentRequestId: null,
+      });
     }
   };
 
@@ -304,7 +513,9 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: response.data,
             timestamp: new Date(),
           };
-          setEntries((prev) => [...prev, outputEntry]);
+          updateActiveSession({
+            entries: [...activeSession.entries, outputEntry],
+          });
         }
         break;
 
@@ -316,19 +527,24 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: response.data,
             timestamp: new Date(),
           };
-          setEntries((prev) => [...prev, errorEntry]);
+          updateActiveSession({
+            entries: [...activeSession.entries, errorEntry],
+          });
         }
         break;
 
-      case "error":
+      case "error": {
         const errorEntry: TerminalEntry = {
           id: Date.now() + Math.random(),
           type: "error",
           content: `Error: ${response.error || "Unknown error"}`,
           timestamp: new Date(),
         };
-        setEntries((prev) => [...prev, errorEntry]);
+        updateActiveSession({
+          entries: [...activeSession.entries, errorEntry],
+        });
         break;
+      }
 
       case "exit":
         // Command completed - could show exit code if non-zero
@@ -339,7 +555,9 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             content: `Process exited with code ${response.exitCode}`,
             timestamp: new Date(),
           };
-          setEntries((prev) => [...prev, exitEntry]);
+          updateActiveSession({
+            entries: [...activeSession.entries, exitEntry],
+          });
         }
         break;
     }
@@ -347,30 +565,38 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
 
   // Cancel current command execution
   const cancelCommand = async () => {
-    if (currentRequestId) {
+    if (activeSession.currentRequestId) {
       try {
-        await fetch(`/api/terminal/abort/${currentRequestId}`, {
+        await fetch(`/api/terminal/abort/${activeSession.currentRequestId}`, {
           method: "POST",
         });
       } catch (error) {
         console.error("Error cancelling command:", error);
       }
     }
-    setIsExecuting(false);
-    setCurrentRequestId(null);
+    updateActiveSession({
+      isExecuting: false,
+      currentRequestId: null,
+    });
   };
 
   const handleCommandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentCommand.trim() || isExecuting) return;
+    if (!activeSession.currentCommand.trim() || activeSession.isExecuting)
+      return;
 
     // Handle clear command locally for immediate response
-    if (currentCommand.trim().toLowerCase() === "clear") {
-      setEntries([]);
-      setCurrentCommand("");
-      setCommandHistory((prev) => [...prev, currentCommand]);
-      setHistoryIndex(-1);
+    if (activeSession.currentCommand.trim().toLowerCase() === "clear") {
+      updateActiveSession({
+        entries: [],
+        currentCommand: "",
+        commandHistory: [
+          ...activeSession.commandHistory,
+          activeSession.currentCommand,
+        ],
+        historyIndex: -1,
+      });
       return;
     }
 
@@ -378,17 +604,21 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     const commandEntry: TerminalEntry = {
       id: Date.now(),
       type: "command",
-      content: currentCommand,
+      content: activeSession.currentCommand,
       timestamp: new Date(),
     };
 
-    setEntries((prev) => [...prev, commandEntry]);
+    const cmd = activeSession.currentCommand;
 
-    // Update command history
-    setCommandHistory((prev) => [...prev, currentCommand]);
-    const cmd = currentCommand;
-    setCurrentCommand("");
-    setHistoryIndex(-1);
+    updateActiveSession({
+      entries: [...activeSession.entries, commandEntry],
+      commandHistory: [
+        ...activeSession.commandHistory,
+        activeSession.currentCommand,
+      ],
+      currentCommand: "",
+      historyIndex: -1,
+    });
 
     // Execute command
     await executeCommand(cmd);
@@ -397,30 +627,42 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (commandHistory.length > 0) {
-        const newIndex = historyIndex + 1;
-        if (newIndex < commandHistory.length) {
-          setHistoryIndex(newIndex);
-          setCurrentCommand(
-            commandHistory[commandHistory.length - 1 - newIndex],
-          );
+      if (activeSession.commandHistory.length > 0) {
+        const newIndex = activeSession.historyIndex + 1;
+        if (newIndex < activeSession.commandHistory.length) {
+          updateActiveSession({
+            historyIndex: newIndex,
+            currentCommand:
+              activeSession.commandHistory[
+                activeSession.commandHistory.length - 1 - newIndex
+              ],
+          });
         }
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (historyIndex > 0) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        setCurrentCommand(commandHistory[commandHistory.length - 1 - newIndex]);
-      } else if (historyIndex === 0) {
-        setHistoryIndex(-1);
-        setCurrentCommand("");
+      if (activeSession.historyIndex > 0) {
+        const newIndex = activeSession.historyIndex - 1;
+        updateActiveSession({
+          historyIndex: newIndex,
+          currentCommand:
+            activeSession.commandHistory[
+              activeSession.commandHistory.length - 1 - newIndex
+            ],
+        });
+      } else if (activeSession.historyIndex === 0) {
+        updateActiveSession({
+          historyIndex: -1,
+          currentCommand: "",
+        });
       }
     }
   };
 
   const clearTerminal = () => {
-    setEntries([]);
+    updateActiveSession({
+      entries: [],
+    });
   };
 
   const copyEntry = (content: string) => {
@@ -430,23 +672,81 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
     });
   };
 
-  const formatTimestamp = (date: Date) => {
-    return date.toLocaleTimeString();
-  };
-
   return (
     <div className="h-full flex flex-col space-y-4">
+      {/* Terminal Tabs Bar */}
+      <div
+        role="tablist"
+        className="flex items-center gap-1 border-b border-accent/20 pb-2 flex-shrink-0"
+      >
+        {/* Terminal Tabs */}
+        {sessions.map((session) => (
+          <button
+            key={session.id}
+            role="tab"
+            aria-selected={session.id === activeSessionId}
+            aria-controls={`terminal-panel-${session.id}`}
+            onClick={() => setActiveSessionId(session.id)}
+            className={`
+              relative flex items-center gap-2 px-3 py-1.5 rounded-t-lg smooth-transition text-sm font-medium
+              ${
+                session.id === activeSessionId
+                  ? "bg-gradient-primary text-primary glow-effect"
+                  : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+              }
+            `}
+          >
+            <CommandLineIcon className="w-3.5 h-3.5" />
+            <span>{session.name}</span>
+
+            {/* Executing indicator */}
+            {session.isExecuting && (
+              <span
+                className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"
+                aria-label="Command executing"
+              />
+            )}
+
+            {/* Close button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                closeSession(session.id);
+              }}
+              className="ml-1 p-0.5 rounded hover:bg-red-900/20 smooth-transition"
+              aria-label={`Close ${session.name}`}
+            >
+              <XMarkIcon className="w-3.5 h-3.5" />
+            </button>
+          </button>
+        ))}
+
+        {/* New Terminal Button */}
+        <button
+          onClick={createNewSession}
+          disabled={sessions.length >= MAX_TERMINALS}
+          className="p-1.5 glass-button glow-border smooth-transition rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="New terminal"
+          title={
+            sessions.length >= MAX_TERMINALS
+              ? `Maximum ${MAX_TERMINALS} terminals reached`
+              : "New terminal (Ctrl+Shift+T)"
+          }
+        >
+          <PlusIcon className="w-4 h-4 text-accent" />
+        </button>
+      </div>
+
       {/* Terminal Controls */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 text-secondary text-sm">
-          <CommandLineIcon className="w-4 h-4 text-accent" />
           <span>{getTerminalTitle()}</span>
-          {systemInfo?.isWSL && (
+          {activeSession.systemInfo?.isWSL && (
             <span className="text-orange-400 text-xs bg-orange-500/20 px-2 py-1 rounded">
               WSL
             </span>
           )}
-          {isExecuting && (
+          {activeSession.isExecuting && (
             <span className="text-yellow-400 animate-pulse">
               (executing...)
             </span>
@@ -454,7 +754,7 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {isExecuting && (
+          {activeSession.isExecuting && (
             <button
               onClick={cancelCommand}
               className="p-2 glass-button glow-border smooth-transition rounded-lg bg-red-500/20 hover:bg-red-500/30"
@@ -477,11 +777,14 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
       <div
         ref={terminalRef}
         onClick={handleTerminalClick}
+        id={`terminal-panel-${activeSession.id}`}
+        role="tabpanel"
+        aria-labelledby={`terminal-tab-${activeSession.id}`}
         className="flex-1 glass-card rounded-lg p-4 font-mono text-sm cursor-text overflow-y-auto min-h-0"
       >
         {/* Terminal Content */}
         <div className="space-y-2">
-          {entries.map((entry) => (
+          {activeSession.entries.map((entry) => (
             <div key={entry.id} className="flex flex-col">
               {entry.type === "command" && (
                 <div className="flex items-start gap-2">
@@ -542,14 +845,18 @@ export function TerminalPanel({ workingDirectory = "~" }: TerminalPanelProps) {
             <input
               ref={inputRef}
               type="text"
-              value={currentCommand}
-              onChange={(e) => setCurrentCommand(e.target.value)}
+              value={activeSession.currentCommand}
+              onChange={(e) =>
+                updateActiveSession({ currentCommand: e.target.value })
+              }
               onKeyDown={handleKeyDown}
-              disabled={isExecuting}
+              disabled={activeSession.isExecuting}
               className={`flex-1 bg-transparent text-primary outline-none ${
-                isExecuting ? "opacity-50 cursor-not-allowed" : ""
+                activeSession.isExecuting ? "opacity-50 cursor-not-allowed" : ""
               }`}
-              placeholder={isExecuting ? "Command executing..." : ""}
+              placeholder={
+                activeSession.isExecuting ? "Command executing..." : ""
+              }
               autoComplete="off"
             />
           </form>
