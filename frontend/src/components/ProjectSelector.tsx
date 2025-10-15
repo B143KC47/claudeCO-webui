@@ -1,9 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FolderIcon, PlusIcon, CogIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  CogIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  StarIcon,
+  FolderIcon,
+} from "@heroicons/react/24/outline";
 import type { ProjectsResponse, ProjectInfo } from "../types";
 import { getProjectsUrl } from "../config/api";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useProjectMetadata, type SortMode } from "../hooks/useProjectMetadata";
+import { ProjectCard } from "./projects/ProjectCard";
+import { EmptyState } from "./projects/EmptyState";
 
 interface SystemInfo {
   username: string;
@@ -14,6 +24,10 @@ interface SystemInfo {
   isWSL: boolean;
 }
 
+interface EnhancedProjectInfo extends ProjectInfo {
+  name: string;
+}
+
 export function ProjectSelector() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,24 +36,48 @@ export function ProjectSelector() {
   const [showNewDirectoryInput, setShowNewDirectoryInput] = useState(false);
   const [newDirectoryPath, setNewDirectoryPath] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Command palette state
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Grid keyboard navigation state
+  const [focusedProjectIndex, setFocusedProjectIndex] = useState<number>(-1);
+  const [gridKeyboardMode, setGridKeyboardMode] = useState(false);
+
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // Generate smart path suggestions based on system info and common patterns
+  // Project metadata hook
+  const {
+    sortMode,
+    updateSortMode,
+    toggleFavorite,
+    isFavorite,
+    markAsAccessed,
+    getRecentProjects,
+    getMetadata,
+    getRelativeTime,
+    extractProjectName,
+    truncatePath,
+  } = useProjectMetadata();
+
+  // Generate smart path suggestions based on system info
   const generateSmartPath = useCallback(
     (directoryName: string): string => {
       if (!systemInfo) {
         return `/${directoryName}`;
       }
 
-      const { username, homeDirectory, currentWorkingDirectory, isWSL } =
-        systemInfo;
-
+      const { homeDirectory, currentWorkingDirectory, isWSL } = systemInfo;
       let basePath = currentWorkingDirectory;
 
-      // In WSL, if the current directory is the WSL home (`/home/...`),
-      // but the detected home directory is a Windows path (`/mnt/c/Users/...`),
-      // prefer the Windows path for the suggestion.
+      // WSL path preference
       if (
         isWSL &&
         currentWorkingDirectory.startsWith("/home/") &&
@@ -48,8 +86,7 @@ export function ProjectSelector() {
         basePath = homeDirectory;
       }
 
-      // If the base path doesn't look like a typical development area,
-      // append "/Desktop" as a sensible default.
+      // Default to Desktop if not in dev area
       if (
         !basePath.includes("Desktop") &&
         !basePath.includes("Documents") &&
@@ -67,10 +104,225 @@ export function ProjectSelector() {
     [systemInfo],
   );
 
+  // Enhance projects with metadata
+  const enhancedProjects: EnhancedProjectInfo[] = useMemo(() => {
+    return projects.map((project) => ({
+      ...project,
+      name: extractProjectName(project.path),
+    }));
+  }, [projects, extractProjectName]);
+
+  // Filter and sort projects
+  const filteredProjects = useMemo(() => {
+    let filtered = enhancedProjects;
+
+    // Apply favorites filter
+    if (showFavoritesOnly) {
+      filtered = filtered.filter((p) => isFavorite(p.path));
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.path.toLowerCase().includes(query),
+      );
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortMode) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "path":
+          return a.path.localeCompare(b.path);
+        case "recent": {
+          const metaA = getMetadata(a.path);
+          const metaB = getMetadata(b.path);
+          const timeA = metaA.lastAccessed || 0;
+          const timeB = metaB.lastAccessed || 0;
+          return timeB - timeA; // Most recent first
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [
+    enhancedProjects,
+    showFavoritesOnly,
+    searchQuery,
+    sortMode,
+    isFavorite,
+    getMetadata,
+  ]);
+
+  // Get recent projects for dedicated section
+  const recentProjects = useMemo(() => {
+    const recentPaths = getRecentProjects(5);
+    return enhancedProjects.filter((p) =>
+      recentPaths.some((r) => r.path === p.path),
+    );
+  }, [enhancedProjects, getRecentProjects]);
+
+  // Command palette filtered results
+  const paletteResults = useMemo(() => {
+    if (!paletteQuery.trim()) {
+      // Show recent projects when no query
+      return recentProjects.slice(0, 8);
+    }
+
+    // Fuzzy search
+    const query = paletteQuery.toLowerCase();
+    return enhancedProjects
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.path.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [paletteQuery, enhancedProjects, recentProjects]);
+
+  // Handle project selection
+  const handleProjectSelect = useCallback(
+    (projectPath: string) => {
+      // Mark as accessed for recent tracking
+      markAsAccessed(projectPath);
+
+      const normalizedPath = projectPath.startsWith("/")
+        ? projectPath
+        : `/${projectPath}`;
+      navigate(`/projects${normalizedPath}`);
+    },
+    [markAsAccessed, navigate],
+  );
+
+  // Handle command palette selection
+  const handlePaletteSelect = useCallback(
+    (projectPath: string) => {
+      setShowCommandPalette(false);
+      setPaletteQuery("");
+      setSelectedIndex(0);
+      handleProjectSelect(projectPath);
+    },
+    [handleProjectSelect],
+  );
+
+  // Handle palette keyboard navigation
+  const handlePaletteKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          Math.min(prev + 1, paletteResults.length - 1),
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === "Enter" && paletteResults[selectedIndex]) {
+        e.preventDefault();
+        handlePaletteSelect(paletteResults[selectedIndex].path);
+      }
+    },
+    [paletteResults, selectedIndex, handlePaletteSelect],
+  );
+
   useEffect(() => {
     loadProjects();
     loadSystemInfo();
   }, []);
+
+  // Command Palette keyboard shortcut (Cmd+K or Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if command palette is open
+      if (showCommandPalette) {
+        // Escape to close
+        if (e.key === "Escape") {
+          setShowCommandPalette(false);
+          setPaletteQuery("");
+          setSelectedIndex(0);
+        }
+        return;
+      }
+
+      // Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowCommandPalette(true);
+        setPaletteQuery("");
+        setSelectedIndex(0);
+        return;
+      }
+
+      // Grid keyboard navigation
+      const projects = filteredProjects;
+      if (projects.length === 0) return;
+
+      // Arrow keys activate keyboard mode and navigate
+      if (["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        setGridKeyboardMode(true);
+
+        if (focusedProjectIndex === -1) {
+          // First navigation - focus first project
+          setFocusedProjectIndex(0);
+        } else {
+          let newIndex = focusedProjectIndex;
+
+          if (e.key === "ArrowDown") {
+            // Move down (assuming 3 columns in large screen)
+            newIndex = Math.min(focusedProjectIndex + 3, projects.length - 1);
+          } else if (e.key === "ArrowUp") {
+            newIndex = Math.max(focusedProjectIndex - 3, 0);
+          } else if (e.key === "ArrowRight") {
+            newIndex = Math.min(focusedProjectIndex + 1, projects.length - 1);
+          } else if (e.key === "ArrowLeft") {
+            newIndex = Math.max(focusedProjectIndex - 1, 0);
+          }
+
+          setFocusedProjectIndex(newIndex);
+        }
+      }
+
+      // Enter to select focused project
+      if (e.key === "Enter" && gridKeyboardMode && focusedProjectIndex >= 0) {
+        e.preventDefault();
+        const project = projects[focusedProjectIndex];
+        if (project) {
+          handleProjectSelect(project.path);
+        }
+      }
+
+      // S to toggle star on focused project
+      if (e.key === "s" && gridKeyboardMode && focusedProjectIndex >= 0) {
+        e.preventDefault();
+        const project = projects[focusedProjectIndex];
+        if (project) {
+          toggleFavorite(project.path);
+        }
+      }
+
+      // Escape to exit keyboard mode
+      if (e.key === "Escape" && gridKeyboardMode) {
+        setGridKeyboardMode(false);
+        setFocusedProjectIndex(-1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    showCommandPalette,
+    gridKeyboardMode,
+    focusedProjectIndex,
+    filteredProjects,
+    handleProjectSelect,
+    toggleFavorite,
+  ]);
 
   const loadProjects = async () => {
     try {
@@ -100,13 +352,6 @@ export function ProjectSelector() {
     }
   };
 
-  const handleProjectSelect = (projectPath: string) => {
-    const normalizedPath = projectPath.startsWith("/")
-      ? projectPath
-      : `/${projectPath}`;
-    navigate(`/projects${normalizedPath}`);
-  };
-
   const handleNewDirectory = async () => {
     if (!window.showDirectoryPicker) {
       alert("Directory picker not supported in this browser");
@@ -115,13 +360,7 @@ export function ProjectSelector() {
 
     try {
       const dirHandle = await window.showDirectoryPicker();
-      console.log(
-        "[Directory Picker] Selected directory name:",
-        dirHandle.name,
-      );
-
       const smartPath = generateSmartPath(dirHandle.name);
-      console.log("[Directory Picker] Generated smart path:", smartPath);
 
       setNewDirectoryPath(smartPath);
       setShowNewDirectoryInput(true);
@@ -144,7 +383,6 @@ export function ProjectSelector() {
     setLoading(true);
 
     try {
-      console.log("[Directory Input] Validating path:", newDirectoryPath);
       const response = await fetch("/api/terminal/validate-path", {
         method: "POST",
         headers: {
@@ -154,17 +392,12 @@ export function ProjectSelector() {
       });
 
       const result = await response.json();
-      console.log("[Directory Input] Validation result:", result);
 
       if (response.ok && result.isValid) {
         const pathToUse = result.normalizedPath || newDirectoryPath;
         const normalizedPath = pathToUse.startsWith("/")
           ? pathToUse
           : `/${pathToUse}`;
-        console.log(
-          "[Directory Input] Navigating to:",
-          `/projects${normalizedPath}`,
-        );
         navigate(`/projects${normalizedPath}`);
       } else {
         setValidationError(
@@ -172,7 +405,7 @@ export function ProjectSelector() {
         );
       }
     } catch (error) {
-      console.error("[Directory Input] Error validating path:", error);
+      console.error("Error validating path:", error);
       setValidationError("An error occurred during path validation.");
     } finally {
       setLoading(false);
@@ -183,14 +416,19 @@ export function ProjectSelector() {
     navigate("/settings");
   };
 
-  if (loading) {
+  // Loading state
+  if (loading && projects.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black-primary">
-        <div className="text-secondary">{t("common.loading")}</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent" />
+          <div className="text-secondary">{t("common.loading")}</div>
+        </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black-primary">
@@ -202,85 +440,325 @@ export function ProjectSelector() {
   }
 
   return (
-    <div className="min-h-screen bg-black-primary smooth-transition">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-primary text-gradient text-3xl font-bold tracking-tight">
-            {t("project.title")}
-          </h1>
-          <button
-            onClick={handleOpenSettings}
-            className="flex items-center gap-2 px-4 py-2 glass-card hover:glow-effect smooth-transition rounded-lg text-secondary hover:text-primary"
+    <>
+      {/* Command Palette Modal */}
+      {showCommandPalette && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowCommandPalette(false)}
+        >
+          <div
+            className="w-full max-w-2xl glass-card progressive-blur-heavy border-accent/30 rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <CogIcon className="h-5 w-5" />
-            <span>{t("nav.settings")}</span>
-          </button>
+            {/* Search Input */}
+            <div className="p-4 border-b border-accent/20">
+              <input
+                type="text"
+                value={paletteQuery}
+                onChange={(e) => {
+                  setPaletteQuery(e.target.value);
+                  setSelectedIndex(0);
+                }}
+                onKeyDown={handlePaletteKeyDown}
+                placeholder="Search projects... (or press Esc to close)"
+                className="w-full bg-transparent text-primary text-lg placeholder-tertiary focus:outline-none"
+                autoFocus
+              />
+            </div>
+
+            {/* Results List */}
+            <div className="max-h-[400px] overflow-y-auto">
+              {paletteResults.length > 0 ? (
+                <div className="p-2">
+                  {!paletteQuery && (
+                    <div className="px-3 py-2 text-xs text-tertiary uppercase tracking-wider">
+                      Recent Projects
+                    </div>
+                  )}
+                  {paletteResults.map((project, index) => {
+                    const metadata = getMetadata(project.path);
+                    return (
+                      <div
+                        key={project.path}
+                        className={`
+                          flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer smooth-transition
+                          ${index === selectedIndex ? "bg-gradient-primary text-primary" : "hover:bg-black-secondary/50"}
+                        `}
+                        onClick={() => handlePaletteSelect(project.path)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <FolderIcon
+                          className={`h-5 w-5 ${index === selectedIndex ? "text-white" : "text-accent"}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className={`font-semibold truncate ${index === selectedIndex ? "text-white" : "text-primary"}`}
+                          >
+                            {project.name}
+                          </div>
+                          <div
+                            className={`text-xs font-mono truncate ${index === selectedIndex ? "text-white/70" : "text-tertiary"}`}
+                          >
+                            {truncatePath(project.path)}
+                          </div>
+                        </div>
+                        {metadata.isFavorite && (
+                          <StarIcon
+                            className={`h-4 w-4 ${index === selectedIndex ? "text-white fill-white" : "text-accent fill-accent"}`}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-tertiary">
+                  No projects found matching "{paletteQuery}"
+                </div>
+              )}
+            </div>
+
+            {/* Footer Hints */}
+            <div className="p-3 border-t border-accent/20 flex items-center gap-4 text-xs text-tertiary">
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-1 bg-black-secondary rounded border border-accent/20">
+                  ↑↓
+                </kbd>
+                Navigate
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-1 bg-black-secondary rounded border border-accent/20">
+                  Enter
+                </kbd>
+                Select
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-1 bg-black-secondary rounded border border-accent/20">
+                  Esc
+                </kbd>
+                Close
+              </span>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div className="space-y-3">
-          {projects.length > 0 && (
-            <>
-              <h2 className="text-secondary text-lg font-medium mb-4">
-                {t("project.configured")}
-              </h2>
-              {projects.map((project) => (
-                <button
-                  key={project.path}
-                  onClick={() => handleProjectSelect(project.path)}
-                  className="w-full flex items-center gap-3 p-4 glass-card hover:glow-effect smooth-transition rounded-lg text-left"
-                >
-                  <FolderIcon className="h-5 w-5 text-accent flex-shrink-0" />
-                  <span className="text-primary font-mono text-sm">
-                    {project.path}
-                  </span>
-                </button>
-              ))}
-              <div className="my-6 border-t border-accent" />
-            </>
-          )}
+      {/* Main Content */}
+      <div className="min-h-screen bg-black-primary smooth-transition">
+        <div className="max-w-7xl mx-auto p-6">
+          {/* Hero Section */}
+          <div className="mb-8">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-primary text-gradient text-4xl font-bold tracking-tight mb-2">
+                  {t("project.title")}
+                </h1>
+                {systemInfo && (
+                  <p className="text-tertiary text-sm">
+                    {systemInfo.username}@{systemInfo.hostname}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleOpenSettings}
+                className="flex items-center gap-2 px-4 py-2 glass-card hover:glow-effect smooth-transition rounded-lg text-secondary hover:text-primary"
+              >
+                <CogIcon className="h-5 w-5" />
+                <span>{t("nav.settings")}</span>
+              </button>
+            </div>
 
-          <button
-            onClick={handleNewDirectory}
-            className="w-full flex items-center gap-3 p-4 bg-gradient-primary glow-effect hover:glow-border smooth-transition rounded-lg text-left"
-          >
-            <PlusIcon className="h-5 w-5 text-primary flex-shrink-0" />
-            <span className="text-primary font-medium">
-              {t("project.custom")}
-            </span>
-          </button>
-
-          {showNewDirectoryInput && (
-            <form
-              onSubmit={handleNewDirectorySubmit}
-              className="p-4 glass-card space-y-3"
-            >
-              <label className="text-secondary text-sm">
-                Confirm or correct the suggested path:
-              </label>
-              <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search and Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              {/* Search Bar */}
+              <div className="flex-grow relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-tertiary pointer-events-none" />
                 <input
                   type="text"
-                  value={newDirectoryPath}
-                  onChange={(e) => setNewDirectoryPath(e.target.value)}
-                  placeholder="Enter full directory path (e.g., C:\Users\user\project or /home/user/project)"
-                  className="flex-grow glass-input px-3 py-2 rounded-lg text-primary bg-black-secondary border-accent focus:ring-accent focus:border-accent"
-                  autoFocus
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-24 py-3 glass-input rounded-xl text-primary placeholder-tertiary focus:ring-2 focus:ring-accent focus:border-accent smooth-transition"
                 />
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 glass-button rounded-lg bg-accent text-primary font-semibold disabled:opacity-50"
+                  onClick={() => setShowCommandPalette(true)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 bg-black-secondary/50 rounded-md border border-accent/20 hover:border-accent/40 smooth-transition text-xs text-tertiary"
+                  title="Open Command Palette"
                 >
-                  {loading ? "Validating..." : "Go"}
+                  <span className="hidden sm:inline">⌘K</span>
+                  <span className="sm:hidden">⌃K</span>
                 </button>
               </div>
-              {validationError && (
-                <p className="text-accent text-sm">{validationError}</p>
-              )}
-            </form>
+
+              {/* Sort Dropdown */}
+              <select
+                value={sortMode}
+                onChange={(e) => updateSortMode(e.target.value as SortMode)}
+                className="px-4 py-3 glass-card rounded-xl text-primary bg-black-secondary border border-accent/20 focus:ring-2 focus:ring-accent smooth-transition cursor-pointer"
+              >
+                <option value="recent">Recent</option>
+                <option value="name">Name</option>
+                <option value="path">Path</option>
+              </select>
+
+              {/* Favorites Filter Toggle */}
+              <button
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`
+                flex items-center gap-2 px-4 py-3 rounded-xl smooth-transition font-medium
+                ${
+                  showFavoritesOnly
+                    ? "bg-gradient-primary text-primary glow-effect"
+                    : "glass-card text-secondary hover:text-primary"
+                }
+              `}
+              >
+                <StarIcon
+                  className={`h-5 w-5 ${showFavoritesOnly ? "fill-current" : ""}`}
+                />
+                <span className="hidden sm:inline">Favorites</span>
+              </button>
+            </div>
+
+            {/* New Project Button */}
+            <button
+              onClick={handleNewDirectory}
+              className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-primary glow-effect hover:glow-border smooth-transition rounded-xl text-primary font-medium shadow-lg hover:shadow-xl"
+            >
+              <PlusIcon className="h-6 w-6" />
+              <span>{t("project.custom")}</span>
+            </button>
+
+            {/* Path Input Form */}
+            {showNewDirectoryInput && (
+              <form
+                onSubmit={handleNewDirectorySubmit}
+                className="mt-4 p-4 glass-card rounded-xl space-y-3"
+              >
+                <label className="text-secondary text-sm">
+                  Confirm or correct the suggested path:
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={newDirectoryPath}
+                    onChange={(e) => setNewDirectoryPath(e.target.value)}
+                    placeholder="Enter full directory path..."
+                    className="flex-grow glass-input px-3 py-2 rounded-lg text-primary bg-black-secondary border-accent/20 focus:ring-accent focus:border-accent"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-primary rounded-lg text-primary font-semibold smooth-transition glow-effect disabled:opacity-50"
+                  >
+                    {loading ? "Validating..." : "Go"}
+                  </button>
+                </div>
+                {validationError && (
+                  <p className="text-accent text-sm">{validationError}</p>
+                )}
+              </form>
+            )}
+          </div>
+
+          {/* Recent Projects Section - Bento Grid */}
+          {recentProjects.length > 0 && !showFavoritesOnly && !searchQuery && (
+            <div className="mb-10">
+              <h2 className="text-primary text-xl font-bold mb-4 flex items-center gap-2">
+                <span>Recently Opened</span>
+                <span className="text-accent text-sm font-normal">
+                  ({recentProjects.length})
+                </span>
+              </h2>
+              <div className="bento-grid">
+                {recentProjects.map((project, index) => {
+                  const metadata = getMetadata(project.path);
+                  const bentoSize =
+                    metadata.importance === "high"
+                      ? "large"
+                      : metadata.importance === "medium"
+                        ? "medium"
+                        : "normal";
+
+                  // Check if this is the focused project
+                  const isFocused =
+                    gridKeyboardMode && focusedProjectIndex === index;
+
+                  return (
+                    <ProjectCard
+                      key={project.path}
+                      path={project.path}
+                      name={project.name}
+                      truncatedPath={truncatePath(project.path)}
+                      metadata={metadata}
+                      isRecent={true}
+                      onSelect={() => handleProjectSelect(project.path)}
+                      onToggleFavorite={() => toggleFavorite(project.path)}
+                      getRelativeTime={getRelativeTime}
+                      bentoSize={bentoSize}
+                      isFocused={isFocused}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           )}
+
+          {/* All Projects Section */}
+          <div>
+            <h2 className="text-primary text-xl font-bold mb-4 flex items-center gap-2">
+              <span>
+                {showFavoritesOnly ? "Favorite Projects" : "All Projects"}
+              </span>
+              <span className="text-accent text-sm font-normal">
+                ({filteredProjects.length})
+              </span>
+            </h2>
+
+            {filteredProjects.length > 0 ? (
+              <div className="bento-grid">
+                {filteredProjects.map((project, index) => {
+                  const metadata = getMetadata(project.path);
+                  const bentoSize =
+                    metadata.importance === "high"
+                      ? "large"
+                      : metadata.importance === "medium"
+                        ? "medium"
+                        : "normal";
+
+                  // Check if this is the focused project
+                  const isFocused =
+                    gridKeyboardMode && focusedProjectIndex === index;
+
+                  return (
+                    <ProjectCard
+                      key={project.path}
+                      path={project.path}
+                      name={project.name}
+                      truncatedPath={truncatePath(project.path)}
+                      metadata={metadata}
+                      onSelect={() => handleProjectSelect(project.path)}
+                      onToggleFavorite={() => toggleFavorite(project.path)}
+                      getRelativeTime={getRelativeTime}
+                      bentoSize={bentoSize}
+                      isFocused={isFocused}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                onAddProject={handleNewDirectory}
+                searchQuery={searchQuery}
+                showFavoritesOnly={showFavoritesOnly}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

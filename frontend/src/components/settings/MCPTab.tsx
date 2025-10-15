@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   ServerIcon,
   CheckCircleIcon,
@@ -34,8 +40,8 @@ interface MCPResponse {
   claudeConnection: ClaudeConnection;
 }
 
-// 骨架屏组件
-function MCPSkeletonLoader() {
+// Skeleton loader component - memoized for performance
+const MCPSkeletonLoader = React.memo(() => {
   return (
     <div className="space-y-6 animate-pulse">
       {/* Header skeleton */}
@@ -90,14 +96,14 @@ function MCPSkeletonLoader() {
       </div>
     </div>
   );
-}
+});
 
-// 缓存管理
+// Cache management for performance
 class MCPDataCache {
   private data: MCPResponse | null = null;
   private categories: string[] = [];
   private lastFetch: number = 0;
-  private readonly cacheTimeout = 30000; // 30秒缓存
+  private readonly cacheTimeout = 60000; // 60 second cache for better performance
 
   setMCPData(data: MCPResponse) {
     this.data = data;
@@ -131,7 +137,7 @@ class MCPDataCache {
   }
 }
 
-// 单例缓存实例
+// Singleton cache instance
 const mcpCache = new MCPDataCache();
 
 export function MCPTab() {
@@ -139,7 +145,7 @@ export function MCPTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("所有");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [editingServer, setEditingServer] = useState<MCPServer | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -148,16 +154,16 @@ export function MCPTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<MCPServer | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // 防抖相关
+  // Debounce related refs for performance
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
   const lastRefreshRef = useRef<number>(0);
 
-  // 防抖刷新函数
+  // Debounced refresh function for performance
   const debouncedRefresh = useCallback(() => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshRef.current;
 
-    // 如果距离上次刷新不足1秒，则忽略
+    // Ignore if less than 1 second since last refresh
     if (timeSinceLastRefresh < 1000) {
       return;
     }
@@ -168,12 +174,12 @@ export function MCPTab() {
 
     refreshTimeoutRef.current = setTimeout(() => {
       lastRefreshRef.current = now;
-      loadMCPData(true); // 强制刷新，跳过缓存
+      loadMCPData(true); // Force refresh, skip cache
     }, 300);
   }, []);
 
   useEffect(() => {
-    // 组件挂载时，尝试从缓存加载数据
+    // On mount, try to load data from cache first
     const cachedData = mcpCache.getMCPData();
     const cachedCategories = mcpCache.getCategories();
 
@@ -182,7 +188,7 @@ export function MCPTab() {
       setCategories(["所有", ...cachedCategories]);
       setLoading(false);
     } else {
-      // 并行加载数据
+      // Load data in parallel for better performance
       Promise.all([loadMCPData(), loadCategories()]).finally(() => {
         setLoading(false);
       });
@@ -202,7 +208,7 @@ export function MCPTab() {
         const data = await response.json();
         const categoryList = data.categories;
         mcpCache.setCategories(categoryList);
-        setCategories(["所有", ...categoryList]);
+        setCategories(["All", ...categoryList]);
       }
     } catch (error) {
       console.error("Failed to load categories:", error);
@@ -211,7 +217,7 @@ export function MCPTab() {
 
   const loadMCPData = useCallback(async (forceRefresh = false) => {
     try {
-      // 如果不是强制刷新，先检查缓存
+      // Check cache first unless force refresh
       if (!forceRefresh) {
         const cachedData = mcpCache.getMCPData();
         if (cachedData) {
@@ -269,13 +275,13 @@ export function MCPTab() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "running":
-        return "运行中";
+        return "Running";
       case "stopped":
-        return "已停止";
+        return "Stopped";
       case "error":
-        return "错误";
+        return "Error";
       default:
-        return "未知";
+        return "Unknown";
     }
   };
 
@@ -295,7 +301,7 @@ export function MCPTab() {
   const handleEditServer = useCallback((server: MCPServer) => {
     setEditingServer(server);
     setEditDescription(server.customDescription || server.description);
-    setEditCategory(server.category || "其他");
+    setEditCategory(server.category || "Other");
   }, []);
 
   const handleSaveEdit = useCallback(async () => {
@@ -316,15 +322,15 @@ export function MCPTab() {
       });
 
       if (response.ok) {
-        await loadMCPData(true); // 强制刷新缓存
+        await loadMCPData(true); // Force refresh cache
         setEditingServer(null);
       } else {
         const errorData = await response.json();
-        alert(`保存失败: ${errorData.error || "未知错误"}`);
+        alert(`Save failed: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error saving configuration:", error);
-      alert("保存配置失败");
+      alert("Failed to save configuration");
     } finally {
       setSaving(false);
     }
@@ -356,7 +362,7 @@ export function MCPTab() {
       });
 
       if (response.ok) {
-        // 乐观更新：立即从UI中移除服务器
+        // Optimistic update: immediately remove from UI
         setMcpData((prev) => {
           if (!prev) return prev;
           return {
@@ -365,21 +371,28 @@ export function MCPTab() {
           };
         });
         setDeleteConfirm(null);
-        
-        // 显示成功消息
-        setSuccessMessage(`成功删除 MCP 服务器: ${deleteConfirm.name}`);
+
+        // Show success message
+        setSuccessMessage(
+          `Successfully deleted MCP server: ${deleteConfirm.name}`,
+        );
         setTimeout(() => setSuccessMessage(null), 3000);
 
-        // 后台重新加载数据以确保一致性
+        // Reload data in background to ensure consistency
         setTimeout(() => loadMCPData(true), 500);
       } else {
         const errorData = await response.json();
-        const errorMessage = errorData.details || errorData.error || "未知错误";
-        alert(`删除失败: ${errorMessage}\n\n请确保 Claude CLI 已正确安装并可访问。`);
+        const errorMessage =
+          errorData.details || errorData.error || "Unknown error";
+        alert(
+          `Delete failed: ${errorMessage}\n\nPlease ensure Claude CLI is properly installed and accessible.`,
+        );
       }
     } catch (error) {
       console.error("Error removing server:", error);
-      alert(`删除服务器失败: ${error instanceof Error ? error.message : "网络错误"}\n\n请检查网络连接和服务器状态。`);
+      alert(
+        `Failed to delete server: ${error instanceof Error ? error.message : "Network error"}\n\nPlease check network connection and server status.`,
+      );
     } finally {
       setDeletingServer(null);
     }
@@ -389,11 +402,13 @@ export function MCPTab() {
     setDeleteConfirm(null);
   }, []);
 
-  const filteredServers =
-    mcpData?.servers.filter((server) => {
-      if (selectedCategory === "所有") return true;
-      return server.category === selectedCategory;
-    }) || [];
+  const filteredServers = useMemo(() => {
+    if (!mcpData?.servers) return [];
+    if (selectedCategory === "All") return mcpData.servers;
+    return mcpData.servers.filter(
+      (server) => server.category === selectedCategory,
+    );
+  }, [mcpData?.servers, selectedCategory]);
 
   if (loading) {
     return <MCPSkeletonLoader />;
@@ -484,26 +499,30 @@ export function MCPTab() {
         <div className="flex items-center space-x-3">
           <h2 className="text-xl font-semibold text-primary">MCP 服务器管理</h2>
           {mcpData?.claudeConnection && (
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
-              mcpData.claudeConnection.status === "connected"
-                ? "bg-green-500/10 text-green-500"
-                : mcpData.claudeConnection.status === "error"
-                ? "bg-red-500/10 text-red-500"
-                : "bg-yellow-500/10 text-yellow-500"
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
+            <div
+              className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
                 mcpData.claudeConnection.status === "connected"
-                  ? "bg-green-500"
+                  ? "bg-green-500/10 text-green-500"
                   : mcpData.claudeConnection.status === "error"
-                  ? "bg-red-500"
-                  : "bg-yellow-500"
-              }`} />
+                    ? "bg-red-500/10 text-red-500"
+                    : "bg-yellow-500/10 text-yellow-500"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  mcpData.claudeConnection.status === "connected"
+                    ? "bg-green-500"
+                    : mcpData.claudeConnection.status === "error"
+                      ? "bg-red-500"
+                      : "bg-yellow-500"
+                }`}
+              />
               <span>
                 {mcpData.claudeConnection.status === "connected"
                   ? "Claude 已连接"
                   : mcpData.claudeConnection.status === "error"
-                  ? "连接错误"
-                  : "Claude 未连接"}
+                    ? "连接错误"
+                    : "Claude 未连接"}
               </span>
             </div>
           )}
@@ -540,22 +559,26 @@ export function MCPTab() {
 
       {/* Claude Code Connection Status */}
       {mcpData?.claudeConnection && (
-        <div className={`glass-card p-4 ${
-          mcpData.claudeConnection.status === "connected" 
-            ? "glow-border" 
-            : mcpData.claudeConnection.status === "error"
-            ? "border border-red-500/30"
-            : "border border-yellow-500/30"
-        }`}>
+        <div
+          className={`glass-card p-4 ${
+            mcpData.claudeConnection.status === "connected"
+              ? "glow-border"
+              : mcpData.claudeConnection.status === "error"
+                ? "border border-red-500/30"
+                : "border border-yellow-500/30"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <ServerIcon className={`h-5 w-5 ${
-                mcpData.claudeConnection.status === "connected"
-                  ? "text-accent"
-                  : mcpData.claudeConnection.status === "error"
-                  ? "text-red-500"
-                  : "text-yellow-500"
-              }`} />
+              <ServerIcon
+                className={`h-5 w-5 ${
+                  mcpData.claudeConnection.status === "connected"
+                    ? "text-accent"
+                    : mcpData.claudeConnection.status === "error"
+                      ? "text-red-500"
+                      : "text-yellow-500"
+                }`}
+              />
               <div>
                 <h3 className="font-medium text-primary">
                   Claude Code 连接状态
@@ -573,15 +596,15 @@ export function MCPTab() {
                       mcpData.claudeConnection.status === "connected"
                         ? "text-accent"
                         : mcpData.claudeConnection.status === "error"
-                        ? "text-red-500"
-                        : "text-yellow-500"
+                          ? "text-red-500"
+                          : "text-yellow-500"
                     }`}
                   >
                     {mcpData.claudeConnection.status === "connected"
                       ? "已连接"
                       : mcpData.claudeConnection.status === "error"
-                      ? "连接错误"
-                      : "未连接"}
+                        ? "连接错误"
+                        : "未连接"}
                   </span>
                   {mcpData.claudeConnection.version && (
                     <span className="text-xs text-tertiary ml-2">

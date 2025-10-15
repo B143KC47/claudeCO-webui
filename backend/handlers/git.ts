@@ -23,8 +23,10 @@ async function executeGitCommand(
   workingDirectory: string,
 ): Promise<{ stdout: string; stderr: string; success: boolean }> {
   try {
-    console.log(`[Git] Executing: git ${args.join(" ")} in ${workingDirectory}`);
-    
+    console.log(
+      `[Git] Executing: git ${args.join(" ")} in ${workingDirectory}`,
+    );
+
     const cmd = new Deno.Command("git", {
       args,
       cwd: workingDirectory,
@@ -35,11 +37,11 @@ async function executeGitCommand(
     const output = await cmd.output();
     const stdout = new TextDecoder().decode(output.stdout);
     const stderr = new TextDecoder().decode(output.stderr);
-    
+
     if (!output.success) {
       console.error(`[Git] Command failed: ${stderr}`);
     }
-    
+
     return {
       stdout,
       stderr,
@@ -60,7 +62,7 @@ async function executeGitCommand(
  */
 function parseGitStatus(output: string): GitFile[] {
   const files: GitFile[] = [];
-  
+
   if (!output || !output.trim()) {
     return files;
   }
@@ -248,7 +250,10 @@ export async function handleGitStatus(c: Context) {
 
     if (!statusResult.success) {
       console.error("Git status command failed:", statusResult.stderr);
-      return c.json({ error: `Git status failed: ${statusResult.stderr}` }, 500);
+      return c.json(
+        { error: `Git status failed: ${statusResult.stderr}` },
+        500,
+      );
     }
 
     const files = parseGitStatus(statusResult.stdout);
@@ -274,7 +279,7 @@ export async function handleGitStatus(c: Context) {
 export async function handleGitBranches(c: Context) {
   try {
     const { workingDirectory } = await c.req.json();
-    
+
     if (!workingDirectory) {
       return c.json({ error: "No working directory provided" }, 400);
     }
@@ -330,7 +335,7 @@ export async function handleGitBranches(c: Context) {
 export async function handleGitLog(c: Context) {
   try {
     const { workingDirectory, limit = 20 } = await c.req.json();
-    
+
     if (!workingDirectory) {
       return c.json({ error: "No working directory provided" }, 400);
     }
@@ -353,14 +358,16 @@ export async function handleGitLog(c: Context) {
     }
 
     const commits: GitCommit[] = [];
-    
+
     // Split by null character between commits (git adds null after each commit with -z)
-    const commitRecords = result.stdout.split("\0").filter(record => record.trim());
+    const commitRecords = result.stdout.split("\0").filter((record) =>
+      record.trim()
+    );
 
     for (const record of commitRecords) {
       // Split each commit record by unit separator character (0x1f)
       const parts = record.split("\x1f");
-      
+
       // Ensure we have at least the minimum required fields
       if (parts.length < 11) {
         console.warn("Skipping malformed commit record, parts:", parts.length);
@@ -379,11 +386,14 @@ export async function handleGitLog(c: Context) {
         committerEmail,
         committerDate,
         refs,
-      ] = parts.map(part => part?.trim() || "");
+      ] = parts.map((part) => part?.trim() || "");
 
       // Skip if essential fields are missing
       if (!hash || !abbreviatedHash) {
-        console.warn("Skipping commit with missing hash:", { hash, abbreviatedHash });
+        console.warn("Skipping commit with missing hash:", {
+          hash,
+          abbreviatedHash,
+        });
         continue;
       }
 
@@ -392,7 +402,9 @@ export async function handleGitLog(c: Context) {
         if (!dateStr) return new Date().toISOString();
         try {
           const date = new Date(dateStr);
-          return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+          return isNaN(date.getTime())
+            ? new Date().toISOString()
+            : date.toISOString();
         } catch {
           return new Date().toISOString();
         }
@@ -408,11 +420,13 @@ export async function handleGitLog(c: Context) {
           email: authorEmail || "unknown@example.com",
           date: parseDate(authorDate),
         },
-        committer: committerName ? {
-          name: committerName || "Unknown Committer",
-          email: committerEmail || "unknown@example.com",
-          date: parseDate(committerDate),
-        } : undefined,
+        committer: committerName
+          ? {
+            name: committerName || "Unknown Committer",
+            email: committerEmail || "unknown@example.com",
+            date: parseDate(committerDate),
+          }
+          : undefined,
         refs: refs
           ? refs
             .replace(/^\(|\)$/g, "")
@@ -436,11 +450,11 @@ export async function handleGitLog(c: Context) {
 export async function handleGitDiff(c: Context) {
   try {
     const { workingDirectory, path, staged = false } = await c.req.json();
-    
+
     if (!workingDirectory) {
       return c.json({ error: "No working directory provided" }, 400);
     }
-    
+
     if (!path) {
       return c.json({ error: "No file path provided" }, 400);
     }
@@ -596,13 +610,15 @@ export async function handleGitCommit(c: Context) {
     const commitMessageFile = await Deno.makeTempFile();
     try {
       await Deno.writeTextFile(commitMessageFile, message);
-      
+
       const args = ["commit", "-F", commitMessageFile];
       if (amend) {
         args.push("--amend");
       }
 
-      console.log(`[Git] Committing with message: ${message.substring(0, 50)}...`);
+      console.log(
+        `[Git] Committing with message: ${message.substring(0, 50)}...`,
+      );
       const result = await executeGitCommand(args, workingDirectory);
 
       if (!result.success) {

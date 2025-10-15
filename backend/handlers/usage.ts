@@ -123,7 +123,7 @@ async function readConversationLogs(
         console.log(`Checking log directory: ${logPath}`);
 
         const files = [];
-        
+
         // Scan project directories
         for await (const projectEntry of Deno.readDir(logPath)) {
           if (projectEntry.isDirectory) {
@@ -146,7 +146,7 @@ async function readConversationLogs(
         for (const file of files) {
           const fileLogs = await readJSONLFile(file);
           // Filter logs by date
-          const filteredLogs = fileLogs.filter(log => {
+          const filteredLogs = fileLogs.filter((log) => {
             if (!log.timestamp) return false;
             const logDate = log.timestamp.split("T")[0];
             return isWithinDateRange(logDate, filters);
@@ -207,7 +207,7 @@ async function readJSONLFile(filepath: string): Promise<ConversationLog[]> {
         if (log.type === "summary" || log.type === "user") {
           continue;
         }
-        
+
         // Use totalCost if available, otherwise calculate
         if (!log.cost) {
           log.cost = log.totalCost || calculateCost(log);
@@ -318,7 +318,7 @@ function groupByDays(
     const modelUsage = aggregateModelUsage(dayLogs);
     const hourlyBreakdown = calculateHourlyBreakdown(dayLogs);
     const totalCost = dayLogs.reduce((sum, log) => sum + (log.cost || 0), 0);
-    
+
     // Find peak hour
     let peakHour = "";
     let maxHourCost = 0;
@@ -352,24 +352,28 @@ function groupByDays(
 }
 
 function calculateHourlyBreakdown(logs: ConversationLog[]): HourlyUsage[] {
-  const hourMap = new Map<number, { cost: number; tokens: number; requests: number }>();
-  
+  const hourMap = new Map<
+    number,
+    { cost: number; tokens: number; requests: number }
+  >();
+
   // Initialize all hours
   for (let hour = 0; hour < 24; hour++) {
     hourMap.set(hour, { cost: 0, tokens: 0, requests: 0 });
   }
-  
+
   // Aggregate by hour
   for (const log of logs) {
     const hour = new Date(log.timestamp).getHours();
     const hourData = hourMap.get(hour)!;
-    
+
     hourData.cost += log.cost || 0;
-    hourData.tokens += (log.totalInputTokens || 0) + (log.totalOutputTokens || 0) +
+    hourData.tokens += (log.totalInputTokens || 0) +
+      (log.totalOutputTokens || 0) +
       (log.cacheCreationInputTokens || 0) + (log.cacheReadInputTokens || 0);
     hourData.requests += 1;
   }
-  
+
   // Convert to array
   const hourlyUsage: HourlyUsage[] = [];
   for (let hour = 0; hour < 24; hour++) {
@@ -381,7 +385,7 @@ function calculateHourlyBreakdown(logs: ConversationLog[]): HourlyUsage[] {
       requests: data.requests,
     });
   }
-  
+
   return hourlyUsage;
 }
 

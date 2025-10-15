@@ -210,14 +210,16 @@ async function checkClaudeCodeConnection(): Promise<{
       stderr: "piped",
     });
 
-    const { code: versionCode, stdout: versionStdout, stderr: versionStderr } = await versionCmd.output();
+    const { code: versionCode, stdout: versionStdout, stderr: versionStderr } =
+      await versionCmd.output();
 
     if (versionCode !== 0) {
       const errorOutput = new TextDecoder().decode(versionStderr);
       console.error("Claude CLI not available:", errorOutput);
       return {
         status: "disconnected",
-        message: "Claude CLI not found. Please ensure claude is installed and in PATH."
+        message:
+          "Claude CLI not found. Please ensure claude is installed and in PATH.",
       };
     }
 
@@ -237,20 +239,22 @@ async function checkClaudeCodeConnection(): Promise<{
       return {
         status: "connected",
         version: versionOutput,
-        message: "Claude Code is connected and working properly"
+        message: "Claude Code is connected and working properly",
       };
     } else {
       return {
         status: "error",
         version: versionOutput,
-        message: "Claude CLI found but MCP commands not working"
+        message: "Claude CLI found but MCP commands not working",
       };
     }
   } catch (error) {
     console.error("Error checking Claude Code connection:", error);
     return {
       status: "error",
-      message: `Failed to check connection: ${error instanceof Error ? error.message : "Unknown error"}`
+      message: `Failed to check connection: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
     };
   }
 }

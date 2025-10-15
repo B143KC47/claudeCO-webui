@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   CurrencyDollarIcon,
   ChartBarIcon,
@@ -33,24 +33,7 @@ export function BillTab() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  useEffect(() => {
-    loadUsageData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, selectedDate]);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const interval = setInterval(() => {
-      loadUsageData();
-      setLastRefresh(new Date());
-    }, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh]);
-
-  const loadUsageData = async () => {
+  const loadUsageData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,7 +68,23 @@ export function BillTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode, selectedDate]);
+
+  useEffect(() => {
+    loadUsageData();
+  }, [loadUsageData]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      loadUsageData();
+      setLastRefresh(new Date());
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefresh, loadUsageData]);
 
   const getStartDate = () => {
     const date = new Date(selectedDate);
@@ -195,12 +194,10 @@ export function BillTab() {
               </h4>
               <div className="text-sm text-gray-400 space-y-2">
                 <p>
-                  Claude Code automatically tracks usage metrics when you use the
-                  claude command through this web interface.
+                  Claude Code automatically tracks usage metrics when you use
+                  the claude command through this web interface.
                 </p>
-                <p>
-                  Usage data includes:
-                </p>
+                <p>Usage data includes:</p>
                 <ul className="list-disc list-inside ml-2 space-y-1">
                   <li>Token usage per request</li>
                   <li>Model costs and billing estimates</li>
@@ -208,8 +205,8 @@ export function BillTab() {
                   <li>Daily and monthly summaries</li>
                 </ul>
                 <p className="mt-3">
-                  Start using Claude through the chat interface to begin tracking
-                  your usage automatically.
+                  Start using Claude through the chat interface to begin
+                  tracking your usage automatically.
                 </p>
               </div>
             </div>
@@ -255,8 +252,12 @@ export function BillTab() {
                 : "bg-gray-700 hover:bg-gray-600 text-white"
             }`}
           >
-            <ArrowPathIcon className={`h-4 w-4 ${autoRefresh ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">{autoRefresh ? "Auto" : "Manual"}</span>
+            <ArrowPathIcon
+              className={`h-4 w-4 ${autoRefresh ? "animate-spin" : ""}`}
+            />
+            <span className="hidden sm:inline">
+              {autoRefresh ? "Auto" : "Manual"}
+            </span>
           </button>
           <button
             onClick={handleRefresh}
@@ -313,7 +314,9 @@ export function BillTab() {
       <div className="glass-card p-4 sm:p-6">
         <div className="flex items-center space-x-3 mb-4">
           <ChartBarIcon className="h-5 sm:h-6 w-5 sm:w-6 text-orange-500" />
-          <h3 className="text-base sm:text-lg font-semibold text-primary">Usage Overview</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-primary">
+            Usage Overview
+          </h3>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -324,7 +327,9 @@ export function BillTab() {
             </p>
           </div>
           <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-gray-400 mb-1">Total Tokens</p>
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">
+              Total Tokens
+            </p>
             <p className="text-lg sm:text-xl font-bold text-primary">
               {formatNumber(usageReport.totalTokens)}
             </p>
@@ -336,9 +341,14 @@ export function BillTab() {
             </p>
           </div>
           <div className="border border-gray-700/30 rounded-lg p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-gray-400 mb-1">Last Updated</p>
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">
+              Last Updated
+            </p>
             <p className="text-base sm:text-lg font-bold text-primary">
-              {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {lastRefresh.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
             {autoRefresh && (
               <p className="text-xs text-gray-500 mt-1">Auto-refresh</p>
@@ -411,13 +421,13 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat("en-US").format(num);
   };
-  
+
   const today = new Date().toISOString().split("T")[0];
-  const todayUsage = usage.find(day => day.date === today);
-  
+  const todayUsage = usage.find((day) => day.date === today);
+
   // Calculate running totals
   let runningTotal = 0;
-  const usageWithRunningTotal = usage.map(day => {
+  const usageWithRunningTotal = usage.map((day) => {
     runningTotal += day.totalCost;
     return { ...day, runningTotal };
   });
@@ -467,29 +477,38 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
               <p className="text-xs sm:text-sm text-gray-400 mb-1">Avg/Hour</p>
               <p className="text-xl sm:text-2xl font-bold text-yellow-400">
                 {formatCurrency(
-                  todayUsage.averageCostPerHour || todayUsage.totalCost / 24
+                  todayUsage.averageCostPerHour || todayUsage.totalCost / 24,
                 )}
               </p>
             </div>
           </div>
-          
+
           {/* Hourly breakdown chart */}
           {todayUsage.hourlyBreakdown && (
             <div className="mt-4 pt-4 border-t border-gray-700">
-              <h4 className="text-sm font-medium text-gray-400 mb-3">Hourly Activity</h4>
+              <h4 className="text-sm font-medium text-gray-400 mb-3">
+                Hourly Activity
+              </h4>
               <HourlyChart hourlyData={todayUsage.hourlyBreakdown} />
             </div>
           )}
-          
+
           {/* Model breakdown for today */}
           {todayUsage.models.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-700">
-              <h4 className="text-sm font-medium text-gray-400 mb-2">Models Used Today</h4>
+              <h4 className="text-sm font-medium text-gray-400 mb-2">
+                Models Used Today
+              </h4>
               <div className="space-y-2">
                 {todayUsage.models.map((model) => (
-                  <div key={model.model} className="flex justify-between text-sm">
+                  <div
+                    key={model.model}
+                    className="flex justify-between text-sm"
+                  >
                     <span className="text-gray-300">{model.model}</span>
-                    <span className="text-orange-400">{formatCurrency(model.cost)}</span>
+                    <span className="text-orange-400">
+                      {formatCurrency(model.cost)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -497,10 +516,12 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
           )}
         </div>
       )}
-      
+
       {/* Daily Usage Table */}
       <div className="glass-card p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-primary mb-4">Daily Usage History</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-primary mb-4">
+          Daily Usage History
+        </h3>
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <table className="w-full text-xs sm:text-sm">
             <thead>
@@ -515,8 +536,8 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
             </thead>
             <tbody>
               {usageWithRunningTotal.map((day) => (
-                <tr 
-                  key={day.date} 
+                <tr
+                  key={day.date}
                   className={`border-b border-gray-700/30 ${
                     day.date === today ? "bg-orange-500/10" : ""
                   }`}
@@ -524,7 +545,9 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
                   <td className="py-2 px-4">
                     {day.date}
                     {day.date === today && (
-                      <span className="ml-2 text-xs text-orange-400">(Today)</span>
+                      <span className="ml-2 text-xs text-orange-400">
+                        (Today)
+                      </span>
                     )}
                   </td>
                   <td className="text-right py-2 px-4 text-orange-400 font-medium">
@@ -539,7 +562,9 @@ function DailyView({ usage }: { usage: DailyUsage[] }) {
                   <td className="text-right py-2 px-4">{day.requestCount}</td>
                   <td className="text-right py-2 px-4 text-gray-400">
                     {formatCurrency(
-                      day.requestCount > 0 ? day.totalCost / day.requestCount : 0
+                      day.requestCount > 0
+                        ? day.totalCost / day.requestCount
+                        : 0,
                     )}
                   </td>
                 </tr>
@@ -764,9 +789,9 @@ function WindowView({ usage }: { usage: DailyUsage[] }) {
 
 // Hourly Chart Component
 function HourlyChart({ hourlyData }: { hourlyData: HourlyUsage[] }) {
-  const maxCost = Math.max(...hourlyData.map(h => h.cost), 0.01);
+  const maxCost = Math.max(...hourlyData.map((h) => h.cost), 0.01);
   const currentHour = new Date().getHours();
-  
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-xs text-gray-500 mb-1">
@@ -781,26 +806,29 @@ function HourlyChart({ hourlyData }: { hourlyData: HourlyUsage[] }) {
           const heightPercent = (hour.cost / maxCost) * 100;
           const isCurrentHour = hour.hour === currentHour;
           const isFuture = hour.hour > currentHour;
-          
+
           return (
             <div
               key={hour.hour}
               className="flex-1 relative group"
-              style={{ height: '100%' }}
+              style={{ height: "100%" }}
             >
               <div
                 className={`absolute bottom-0 w-full transition-all duration-300 rounded-t ${
                   isCurrentHour
                     ? "bg-orange-500 animate-pulse"
                     : isFuture
-                    ? "bg-gray-700"
-                    : hour.cost > 0
-                    ? "bg-orange-600 hover:bg-orange-500"
-                    : "bg-gray-800"
+                      ? "bg-gray-700"
+                      : hour.cost > 0
+                        ? "bg-orange-600 hover:bg-orange-500"
+                        : "bg-gray-800"
                 }`}
-                style={{ height: `${heightPercent}%`, minHeight: hour.cost > 0 ? '4px' : '1px' }}
+                style={{
+                  height: `${heightPercent}%`,
+                  minHeight: hour.cost > 0 ? "4px" : "1px",
+                }}
               />
-              
+
               {/* Tooltip */}
               <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap pointer-events-none z-10 transition-opacity">
                 <div className="font-medium">{hour.hour}:00</div>
@@ -812,8 +840,12 @@ function HourlyChart({ hourlyData }: { hourlyData: HourlyUsage[] }) {
         })}
       </div>
       <div className="flex justify-between text-xs text-gray-500">
-        <span className="text-orange-400">Peak: {hourlyData.find(h => h.cost === maxCost)?.hour}:00</span>
-        <span>Total: ${hourlyData.reduce((sum, h) => sum + h.cost, 0).toFixed(2)}</span>
+        <span className="text-orange-400">
+          Peak: {hourlyData.find((h) => h.cost === maxCost)?.hour}:00
+        </span>
+        <span>
+          Total: ${hourlyData.reduce((sum, h) => sum + h.cost, 0).toFixed(2)}
+        </span>
       </div>
     </div>
   );
@@ -874,7 +906,9 @@ function ModelBreakdown({ usage }: { usage: UsageReport }) {
             className="border border-gray-700/30 rounded-lg p-3 sm:p-4"
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
-              <h4 className="font-medium text-primary text-sm sm:text-base break-all">{model.model}</h4>
+              <h4 className="font-medium text-primary text-sm sm:text-base break-all">
+                {model.model}
+              </h4>
               <span className="text-orange-400 font-bold text-sm sm:text-base">
                 {formatCurrency(model.cost)}
               </span>

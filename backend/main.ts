@@ -41,7 +41,11 @@ import {
 } from "./handlers/sessions.ts";
 import { authHandler } from "./handlers/auth.ts";
 import { networkHandler } from "./handlers/network.ts";
-import { authMiddleware, rateLimitMiddleware, readRateLimitMiddleware } from "./middleware/auth.ts";
+import {
+  authMiddleware,
+  rateLimitMiddleware,
+  readRateLimitMiddleware,
+} from "./middleware/auth.ts";
 
 const args = await parseCliArgs();
 

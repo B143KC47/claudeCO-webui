@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import type { DeviceAuthResponse } from "../../../shared/types";
 
 export const MobileAuth: React.FC = () => {
-  const [step, setStep] = useState<"register" | "verify" | "complete">("register");
+  const [step, setStep] = useState<"register" | "verify" | "complete">(
+    "register",
+  );
   const [deviceName, setDeviceName] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [deviceId, setDeviceId] = useState("");
@@ -64,11 +66,11 @@ export const MobileAuth: React.FC = () => {
       if (!response.ok) throw new Error("Failed to verify device");
 
       const data: DeviceAuthResponse = await response.json();
-      
+
       if (data.status === "approved") {
         setAuthToken(data.authToken);
         setStep("complete");
-        
+
         // Save token to local storage
         localStorage.setItem("claude-webui-auth-token", data.authToken);
         localStorage.setItem("claude-webui-device-id", deviceId);
@@ -166,8 +168,18 @@ export const MobileAuth: React.FC = () => {
             <div className="text-center">
               <div className="mb-4">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-8 h-8 text-green-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
                 <h2 className="text-xl font-semibold mb-2 dark:text-white">
@@ -188,7 +200,8 @@ export const MobileAuth: React.FC = () => {
               </div>
 
               <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">
-                This token has been saved to your device and will be used for API access.
+                This token has been saved to your device and will be used for
+                API access.
               </p>
             </div>
           )}
