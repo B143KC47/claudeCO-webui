@@ -18,9 +18,11 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
     try {
       const response = await fetch("/api/auth/devices");
       if (!response.ok) throw new Error("Failed to fetch devices");
-      
+
       const data = await response.json();
-      const pending = data.devices.filter((d: Device) => d.status === "pending");
+      const pending = data.devices.filter(
+        (d: Device) => d.status === "pending",
+      );
       setPendingDevices(pending);
     } catch (error) {
       console.error("Error fetching devices:", error);
@@ -30,13 +32,16 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchPendingDevices();
-      // Poll for new devices every 2 seconds
-      const interval = setInterval(fetchPendingDevices, 2000);
+      // Poll for new devices every 5 seconds (optimized for same-network performance)
+      const interval = setInterval(fetchPendingDevices, 5000);
       return () => clearInterval(interval);
     }
   }, [isOpen]);
 
-  const handleAuthorize = async (deviceId: string, action: "approve" | "reject") => {
+  const handleAuthorize = async (
+    deviceId: string,
+    action: "approve" | "reject",
+  ) => {
     setLoading(true);
     try {
       const response = await fetch("/api/auth/authorize", {
@@ -46,12 +51,13 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
       });
 
       if (!response.ok) throw new Error("Failed to authorize device");
-      
+
       // Remove the device from pending list
-      setPendingDevices(prev => prev.filter(d => d.id !== deviceId));
-      
+      setPendingDevices((prev) => prev.filter((d) => d.id !== deviceId));
+
       // Show success message
-      const message = action === "approve" ? "Device approved" : "Device rejected";
+      const message =
+        action === "approve" ? "Device approved" : "Device rejected";
       console.log(message);
     } catch (error) {
       console.error("Error authorizing device:", error);
@@ -74,9 +80,18 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -92,6 +107,21 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
                   key={device.id}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                 >
+                  {/* Verification Code Display */}
+                  {device.verificationCode && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border-2 border-blue-500/30">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium text-center">
+                        Verification Code:
+                      </p>
+                      <p className="text-4xl font-bold text-gray-900 dark:text-white text-center tracking-[0.5em] font-mono">
+                        {device.verificationCode}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
+                        Confirm this matches the code on the mobile device
+                      </p>
+                    </div>
+                  )}
+
                   <div className="mb-3">
                     <h3 className="font-semibold dark:text-white">
                       Is this your device?
@@ -105,7 +135,8 @@ export const DeviceAuthDialog: React.FC<DeviceAuthDialogProps> = ({
                       </p>
                     )}
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      Requested: {new Date(device.createdAt).toLocaleTimeString()}
+                      Requested:{" "}
+                      {new Date(device.createdAt).toLocaleTimeString()}
                     </p>
                   </div>
 

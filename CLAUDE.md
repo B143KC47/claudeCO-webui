@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Claude Code Web UI
 
-A web-based interface for the `claude` command line tool that provides streaming responses in a chat interface.
+A comprehensive web-based interface for the Claude CLI tool that provides streaming responses, integrated development tools, session management, and multi-device support.
 
 ## Code Quality
 
@@ -60,26 +60,69 @@ This project consists of three main components:
 - Single binary distribution support
 - Session continuity support using Claude Code SDK's resume functionality
 
-**API Endpoints**:
+**API Endpoints** (25+ endpoints organized by function):
 
-- `GET /api/projects` - Retrieves list of available project directories
-  - Response: `{ projects: string[] }` - Array of project directory paths from Claude configuration
-- `POST /api/chat` - Accepts chat messages and returns streaming responses
-  - Request body: `{ message: string, sessionId?: string, requestId: string, allowedTools?: string[], workingDirectory?: string }`
-  - `requestId` is required for request tracking and abort functionality
-  - Optional `sessionId` enables conversation continuity within the same chat session
-  - Optional `allowedTools` array restricts which tools Claude can use
-  - Optional `workingDirectory` specifies the project directory for Claude execution
-- `POST /api/abort/:requestId` - Aborts an ongoing request by request ID
-- `GET /api/mcp/smithery` - Fetches available MCP servers from Smithery.ai registry
-  - Query parameters: `search` (filter by name/description), `category` (filter by category)
-  - Response: `{ servers: SmitheryServer[], total: number }`
-  - Supports both real API integration (with SMITHERY_API_TOKEN) and mock data fallback
-- `POST /api/mcp/install` - Installs a Smithery.ai MCP server
-  - Request body: `{ serverId: string, serverName: string, serverUrl: string }`
-- `DELETE /api/mcp/uninstall` - Uninstalls an MCP server
-  - Request body: `{ serverName: string }`
-- `/*` - Serves static frontend files (in single binary mode)
+### Core Chat & AI
+- `POST /api/chat` - Streaming chat interface with Claude
+  - Request: `{ message: string, sessionId?: string, requestId: string, allowedTools?: string[], workingDirectory?: string, thinkingBudget?: number }`
+  - Supports thinking mode with configurable token budgets
+- `POST /api/abort/:requestId` - Abort ongoing request
+
+### Project Management
+- `GET /api/projects` - List available project directories
+- `GET /api/projects/:encodedProjectName/histories` - Get project history
+- `GET /api/projects/:encodedProjectName/histories/:sessionId` - Get specific conversation
+
+### Session & History
+- `GET /api/sessions/:sessionId` - Retrieve saved session
+- `POST /api/sessions/:sessionId` - Save session state
+- `DELETE /api/sessions/:sessionId` - Delete session
+- `GET /api/conversations` - List all conversations
+- `GET /api/histories` - Get conversation histories
+
+### Git Operations
+- `GET /api/git/status` - Repository status
+- `POST /api/git/stage` - Stage files
+- `POST /api/git/unstage` - Unstage files
+- `POST /api/git/commit` - Create commit
+- `POST /api/git/push` - Push changes
+- `POST /api/git/pull` - Pull changes
+- `GET /api/git/branches` - List branches
+- `POST /api/git/checkout` - Switch branches
+- `GET /api/git/log` - Commit history
+- `GET /api/git/diff` - View changes
+
+### Terminal Integration
+- `POST /api/terminal/execute` - Execute commands
+- `GET /api/terminal/shells` - List active shells
+- `POST /api/terminal/abort/:shellId` - Abort shell command
+- `GET /api/terminal/info` - Terminal information
+- `POST /api/terminal/validate-path` - Validate file paths
+
+### File Management
+- `GET /api/files/list` - Browse directory contents
+
+### MCP Server Management
+- `GET /api/mcp/smithery` - Browse available MCP servers
+- `POST /api/mcp/install` - Install MCP server
+- `DELETE /api/mcp/uninstall` - Remove MCP server
+- `GET /api/mcp/config` - Get MCP configuration
+- `POST /api/mcp/config` - Update MCP configuration
+
+### Authentication & Devices
+- `POST /api/auth/register` - Register new device
+- `POST /api/auth/approve` - Approve device access
+- `POST /api/auth/reject` - Reject device
+- `GET /api/auth/devices` - List connected devices
+- `DELETE /api/auth/devices/:deviceId` - Revoke device access
+
+### Usage & Billing
+- `GET /api/billing` - Billing information
+- `GET /api/usage` - Usage statistics and analytics
+
+### Network & System
+- `GET /api/network/urls` - Get connection URLs
+- `/*` - Static file serving (single binary mode)
 
 ### Frontend (React)
 
@@ -113,21 +156,28 @@ This project consists of three main components:
 - **Location**: `shared/`
 - **Purpose**: TypeScript type definitions shared between backend and frontend
 
-**Key Types**:
+**Core Type Files**:
 
-- `StreamResponse` - Backend streaming response format with support for claude_json, error, done, and aborted types
-- `ChatRequest` - Chat request structure for API communication
-  - `message: string` - User's message content
-  - `sessionId?: string` - Optional session ID for conversation continuity
-  - `requestId: string` - Required unique identifier for request tracking and abort functionality
-  - `allowedTools?: string[]` - Optional array to restrict which tools Claude can use
-  - `workingDirectory?: string` - Optional project directory path for Claude execution
-- `AbortRequest` - Request structure for aborting ongoing operations
-  - `requestId: string` - ID of the request to abort
-- `ProjectsResponse` - Response structure for project directory list
-  - `projects: string[]` - Array of available project directory paths
+1. **`shared/types.ts`** - Core API types
+   - `StreamResponse` - Streaming response format
+   - `ChatRequest` - Enhanced chat request with thinking mode support
+   - `ProjectsResponse` - Project directory listing
+   - `SessionData` - Session state management
 
-**Note**: Enhanced message types (`ChatMessage`, `SystemMessage`, `ToolMessage`, `ToolResultMessage`, etc.) are defined in `frontend/src/types.ts` for comprehensive frontend message handling.
+2. **`shared/gitTypes.ts`** - Git operation types
+   - `GitStatus`, `GitCommit`, `GitBranch` - Git state types
+   - `GitStageRequest`, `GitCommitRequest`, `GitPushRequest` - Operation requests
+   - `FileStatus` - File change status enum
+
+3. **`shared/billingTypes.ts`** - Usage and billing types
+   - Usage tracking data structures
+   - Cost calculation types
+   - Analytics response formats
+
+**Frontend-Specific Types** (`frontend/src/types.ts`):
+- `ChatMessage`, `SystemMessage`, `ToolMessage` - UI message types
+- `PermissionRequest` - Tool permission handling
+- Terminal, file browser, and demo-related types
 
 ## Claude Command Integration
 
@@ -213,10 +263,38 @@ fetch('http://server:8080/api/chat', {
 - **SQLite Storage**: Secure local database for device records
 
 
-### Overview
+## Integrated Development Tools
 
-YOU MUST USE THE FOLLOWING MCP TOOL FOR YOUR DEVELOPMENT
+The application includes comprehensive development tools accessible through the toolbar:
 
+### Terminal Integration
+- Execute shell commands with real-time output streaming
+- Manage multiple shell sessions
+- Path validation and security checks
+- Command history and session persistence
+
+### File Explorer
+- Browse project directories
+- Navigate file system with breadcrumb trail
+- File type icons and metadata display
+- Quick file operations
+
+### Git Panel
+- Full git workflow support (status, stage, commit, push, pull)
+- Branch management and switching
+- Visual diff viewer
+- Commit history with detailed information
+- Conflict resolution assistance
+
+### Browser Panel (Demo Automation)
+- Automated demo recording and playback
+- Browser automation for testing
+- Screenshot capabilities
+- User interaction simulation
+
+## MCP Tools Integration
+
+### Built-in MCP Tools
 
 #### 1. Context7 Tool
 
@@ -429,13 +507,15 @@ The MCP tools are integrated into the backend through:
 4. **Flexible Evolution**: Easy to modify and extend
 5. **Deep Integration**: Access to application state and context
 
-### Future Tool Ideas
+### MCP Server Management
 
-- **Code Analysis Tool**: Analyze codebase structure and dependencies
-- **Test Generation Tool**: Generate test cases based on code
-- **Documentation Tool**: Auto-generate docs from code
-- **Refactoring Tool**: Suggest and apply code improvements
-- **Dependency Tool**: Manage and analyze project dependencies
+The application provides a complete MCP server management interface:
+
+1. **Server Discovery**: Browse and search Smithery.ai registry
+2. **Installation**: One-click installation of MCP servers
+3. **Configuration**: Visual configuration editor
+4. **Management**: Enable/disable servers, view logs
+5. **Integration**: Seamless integration with Claude conversations
 
 ## Development
 
@@ -492,54 +572,180 @@ cd frontend && npm run dev      # Configures proxy to localhost:9000
    - Backend API: http://localhost:8080 (or PORT from .env file)
    - Mobile Auth: http://localhost:3000/mobile-auth (accessible from mobile devices)
 
+### WSL2 Networking Configuration
+
+If you're running on WSL2 (Windows Subsystem for Linux), additional setup is required for mobile device access:
+
+#### The Problem
+
+- WSL2 uses a virtual network that requires Windows firewall rules
+- Backend defaults to binding on all interfaces (0.0.0.0) for mobile access
+- Windows needs port forwarding rules to route traffic from your network to WSL
+
+#### Quick Setup (Windows PowerShell as Administrator)
+
+```powershell
+# Run the automated setup script
+cd /mnt/c/Users/YOUR_USERNAME/Desktop/project/web-application/claude-code-webui-main
+./setup-firewall.ps1
+```
+
+This script automatically:
+1. Creates Windows Firewall rules for ports 8080 (backend) and 3000 (frontend)
+2. Detects your WSL IP address
+3. Configures port forwarding from Windows → WSL
+4. Shows connection URLs for your mobile device
+
+#### Manual Configuration
+
+If the script doesn't work, configure manually:
+
+**1. Check your WSL IP**:
+```bash
+ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1
+# Example output: 172.27.210.241
+```
+
+**2. Check your Windows IP** (on same network as phone):
+```powershell
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -like "192.168.*"}
+# Example output: 192.168.1.100
+```
+
+**3. Add Windows Firewall Rules**:
+```powershell
+# Backend (port 8080)
+New-NetFirewallRule -DisplayName "Claude Web UI - Backend" `
+    -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
+
+# Frontend (port 3000)
+New-NetFirewallRule -DisplayName "Claude Web UI - Frontend" `
+    -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+
+**4. Configure Port Forwarding**:
+```powershell
+# Replace <WSL_IP> with your WSL IP from step 1
+netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=<WSL_IP>
+netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=<WSL_IP>
+```
+
+**5. Restart Backend**:
+```bash
+# Backend now binds to 0.0.0.0 by default
+cd backend && deno task dev
+```
+
+#### Connecting from Mobile
+
+After setup, your phone can connect using:
+- **Windows IP**: `http://192.168.1.100:3000` (recommended)
+- **WSL IP**: `http://172.27.210.241:3000` (direct, may not work on all networks)
+
+#### Troubleshooting
+
+**Backend not accessible from phone?**
+```bash
+# Check if backend is listening on all interfaces
+ss -tuln | grep 8080
+# Should show: 0.0.0.0:8080 (not 127.0.0.1:8080)
+```
+
+**Windows firewall blocking?**
+```powershell
+# Check firewall rules
+Get-NetFirewallRule -DisplayName "Claude Web UI*" | Format-Table Name,Enabled,Action
+
+# Test if port is open
+Test-NetConnection -ComputerName localhost -Port 8080
+```
+
+**Port forwarding not working?**
+```powershell
+# View current port forwarding rules
+netsh interface portproxy show v4tov4
+
+# Remove and re-add if needed
+netsh interface portproxy delete v4tov4 listenport=8080
+netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=<WSL_IP>
+```
+
+**WSL IP keeps changing?**
+
+WSL2 IP addresses can change after Windows restarts. Re-run the setup script or update port forwarding manually.
+
+#### Host Configuration
+
+The backend now accepts a `HOST` environment variable to control binding:
+
+```bash
+# Default: 0.0.0.0 (all interfaces - mobile access enabled)
+deno task dev
+
+# Localhost only (mobile access disabled)
+HOST=127.0.0.1 deno task dev
+
+# Specific interface
+HOST=192.168.1.100 deno task dev
+```
+
+For persistent configuration, add to `.env` file:
+```bash
+# .env
+HOST=0.0.0.0  # Default for mobile access
+PORT=8080
+```
+
 ### Project Structure
 
 ```
-├── backend/           # Deno backend server
-│   ├── deno.json     # Deno configuration with permissions
-│   ├── main.ts       # Main server implementation
-│   └── args.ts       # CLI argument parsing
-├── frontend/         # React frontend application
+├── backend/              # Deno backend server
+│   ├── handlers/        # API endpoint handlers (14 files)
+│   │   ├── auth.ts      # Device authentication
+│   │   ├── billing.ts   # Usage and billing
+│   │   ├── chat.ts      # Core chat functionality
+│   │   ├── git.ts       # Git operations (19KB)
+│   │   ├── terminal.ts  # Terminal integration (22KB)
+│   │   ├── files.ts     # File management
+│   │   ├── mcp.ts       # MCP server management
+│   │   └── ...          # Additional handlers
+│   ├── middleware/      # Express-style middleware
+│   │   ├── auth.ts      # JWT authentication & rate limiting
+│   │   └── config.ts    # Configuration middleware
+│   ├── history/         # Conversation history management
+│   ├── main.ts          # Application entry (227 lines)
+│   ├── args.ts          # CLI argument parsing
+│   └── deno.json        # Deno config & dependencies
+├── frontend/            # React frontend application  
 │   ├── src/
-│   │   ├── App.tsx   # Main application component with routing
-│   │   ├── main.tsx  # Application entry point
-│   │   ├── types.ts  # Frontend-specific type definitions
-│   │   ├── config/
-│   │   │   └── api.ts                 # API configuration and URLs
-│   │   ├── utils/
-│   │   │   ├── constants.ts           # UI and application constants
-│   │   │   ├── messageTypes.ts        # Type guard functions for messages
-│   │   │   ├── toolUtils.ts           # Tool-related utility functions
-│   │   │   └── time.ts                # Time utilities
-│   │   ├── hooks/
-│   │   │   ├── useClaudeStreaming.ts  # Simplified streaming interface
-│   │   │   ├── useTheme.ts            # Theme management hook
-│   │   │   ├── chat/
-│   │   │   │   ├── useChatState.ts    # Chat state management
-│   │   │   │   ├── usePermissions.ts  # Permission handling logic
-│   │   │   │   └── useAbortController.ts # Request abortion logic
-│   │   │   └── streaming/
-│   │   │       ├── useMessageProcessor.ts # Message creation and processing
-│   │   │       ├── useToolHandling.ts     # Tool-specific message handling
-│   │   │       └── useStreamParser.ts     # Stream parsing and routing
-│   │   ├── components/
-│   │   │   ├── ChatPage.tsx           # Main chat interface page
-│   │   │   ├── ProjectSelector.tsx    # Project directory selection page
-│   │   │   ├── MessageComponents.tsx  # Message display components (refactored)
-│   │   │   ├── PermissionDialog.tsx   # Permission handling dialog
-│   │   │   ├── TimestampComponent.tsx # Timestamp display
-│   │   │   ├── chat/
-│   │   │   │   ├── ThemeToggle.tsx    # Theme toggle button
-│   │   │   │   ├── ChatInput.tsx      # Chat input component
-│   │   │   │   └── ChatMessages.tsx   # Chat messages container
-│   │   │   └── messages/
-│   │   │       ├── MessageContainer.tsx   # Reusable message wrapper
-│   │   │       └── CollapsibleDetails.tsx # Collapsible content component
-│   │   ├── package.json
-│   │   └── vite.config.ts     # Vite config with @tailwindcss/vite plugin
-├── shared/           # Shared TypeScript types
-│   └── types.ts
-└── CLAUDE.md        # This documentation
+│   │   ├── components/  # UI components (20+ files)
+│   │   │   ├── ChatPage.tsx         # Main chat interface
+│   │   │   ├── Settings.tsx         # Settings interface
+│   │   │   ├── DemoPage.tsx         # Demo automation
+│   │   │   ├── HistoryView.tsx      # History browser
+│   │   │   ├── toolbar/             # Development tools
+│   │   │   │   ├── TerminalPanel.tsx
+│   │   │   │   ├── GitPanel.tsx
+│   │   │   │   ├── ExplorerPanel.tsx
+│   │   │   │   └── BrowserPanel.tsx
+│   │   │   ├── settings/            # Settings tabs
+│   │   │   │   ├── DeviceTab.tsx
+│   │   │   │   ├── MCPTab.tsx
+│   │   │   │   ├── BillTab.tsx
+│   │   │   │   └── GeneralTab.tsx
+│   │   │   └── chat/                # Chat components
+│   │   ├── hooks/       # Custom React hooks
+│   │   ├── services/    # Service layer
+│   │   ├── contexts/    # React contexts
+│   │   └── utils/       # Utility functions
+│   └── package.json     # Dependencies & scripts
+├── shared/              # Shared TypeScript types
+│   ├── types.ts         # Core API types
+│   ├── gitTypes.ts      # Git operation types
+│   └── billingTypes.ts  # Usage tracking types
+├── Makefile             # Development commands
+├── .lefthook.yml        # Git hooks configuration
+└── CLAUDE.md            # This documentation
 ```
 
 ## Key Design Decisions
@@ -685,8 +891,8 @@ cd backend && deno task build
 
 Both frontend and backend use **fixed versions** (without caret `^`) to ensure consistency:
 
-- **Frontend**: `frontend/package.json` - `"@anthropic-ai/claude-code": "1.0.33"`
-- **Backend**: `backend/deno.json` imports - `"@anthropic-ai/claude-code": "npm:@anthropic-ai/claude-code@1.0.33"`
+- **Frontend**: `frontend/package.json` - `"@anthropic-ai/claude-code": "1.0.43"`
+- **Backend**: `backend/deno.json` imports - `"@anthropic-ai/claude-code": "npm:@anthropic-ai/claude-code@1.0.43"`
 
 ### Version Update Procedure
 
@@ -728,23 +934,59 @@ Ensure both environments use the same version:
 grep "@anthropic-ai/claude-code" frontend/package.json backend/deno.json
 ```
 
-## Commands for Claude
+## Commands
 
-### Unified Commands (from project root)
+### Primary Development Commands (from project root)
 
-- **Format**: `make format` - Format both frontend and backend
-- **Lint**: `make lint` - Lint both frontend and backend
-- **Type Check**: `make typecheck` - Type check both frontend and backend
-- **Test**: `make test` - Run both frontend and backend tests
-- **Quality Check**: `make check` - Run all quality checks before commit
-- **Format Specific Files**: `make format-files FILES="file1 file2"` - Format specific files with prettier
+```bash
+# Quality & Testing
+make check              # Run all quality checks (format, lint, typecheck, test)
+make test              # Run all tests (frontend + backend)
+make format            # Format all code
+make lint              # Lint all code
+make typecheck         # Type check all code
 
-### Individual Commands
+# Development
+make dev-backend       # Start backend server (port 8080 or PORT env)
+make dev-frontend      # Start frontend dev server (port 3000)
 
-- **Development**: `make dev-backend` / `make dev-frontend`
-- **Testing**: `make test-frontend` / `make test-backend`
-- **Build Binary**: `make build-backend`
-- **Build Frontend**: `make build-frontend`
+# Building
+make build             # Build complete application
+make build-frontend    # Build frontend only
+make build-backend     # Build backend binary
+
+# Utilities
+make install           # Install frontend dependencies
+make clean             # Clean build artifacts
+make format-files FILES="file1 file2"  # Format specific files
+```
+
+### Backend Commands
+
+```bash
+cd backend
+deno task dev          # Development with --watch and --debug
+deno task build        # Create single binary
+deno task test         # Run tests
+deno task format       # Format code
+deno task lint         # Lint code
+deno task check        # Type check
+```
+
+### Frontend Commands
+
+```bash
+cd frontend
+npm run dev            # Development server
+npm run dev:wsl        # WSL development (bind 0.0.0.0)
+npm run build          # Production build
+npm run test           # Run tests with watch
+npm run test:run       # Run tests once
+npm run format         # Format code
+npm run lint           # Lint code
+npm run typecheck      # Type check
+npm run record-demo    # Record browser demo
+```
 
 **Note**: Lefthook automatically runs `make check` before every commit. GitHub Actions will also run all quality checks on push and pull requests.
 
@@ -866,4 +1108,32 @@ gh api repos/sugyan/claude-code-webui/pulls/39/comments
 - Missing these can lead to suboptimal code being merged
 - Always check for Copilot feedback when reviewing PRs
 
-**Important for Claude**: Always run commands from the project root directory. When using `cd` commands for backend/frontend, use full paths like `cd /path/to/project/backend` to avoid getting lost in subdirectories.
+## Important Guidelines
+
+### Command Execution
+- **Always run commands from the project root directory**
+- When using `cd`, use absolute paths: `cd /mnt/c/Users/ko202/Desktop/project/web-application/claude-code-webui-main/backend`
+- Use `make` commands when possible for consistency
+
+### Code Quality
+- **Pre-commit hooks are enforced** - `make check` runs automatically
+- All code must pass format, lint, typecheck, and tests
+- Follow existing patterns and conventions in the codebase
+
+### API Development
+- New endpoints go in `backend/handlers/`
+- Add corresponding types to `shared/` directory
+- Update frontend service layer when adding APIs
+- Include proper error handling and validation
+
+### Testing
+- Write tests for new features
+- Tests are co-located with source files
+- Use Vitest for frontend, Deno test for backend
+- Run `make test` before committing
+
+### Security
+- JWT tokens for authentication (30-day expiry)
+- Rate limiting on sensitive endpoints
+- Input validation on all API endpoints
+- Never commit secrets or API keys

@@ -273,8 +273,103 @@ body {
 }
 
 /* 动画和过渡效果 */
-.smooth-transition {
+@utility smooth-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Bento Grid System - 2025 Modular Layout */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  grid-auto-rows: 280px;
+  grid-auto-flow: dense;
+}
+
+@media (max-width: 640px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 260px;
+  }
+}
+
+.bento-card-large {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+@media (max-width: 640px) {
+  .bento-card-large {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+}
+
+.bento-card-medium {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+@media (max-width: 640px) {
+  .bento-card-medium {
+    grid-column: span 1;
+  }
+}
+
+.bento-card-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+  .bento-card-wide {
+    grid-column: span 1;
+  }
+}
+
+.bento-card-tall {
+  grid-row: span 2;
+}
+
+@media (max-width: 640px) {
+  .bento-card-tall {
+    grid-row: span 1;
+  }
+}
+
+/* Progressive Blur System - 2025 Depth Effect */
+.progressive-blur-light {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: backdrop-filter 0.3s ease;
+}
+
+.progressive-blur-medium {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: backdrop-filter 0.3s ease;
+}
+
+.progressive-blur-heavy {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: backdrop-filter 0.3s ease;
+}
+
+.layer-depth {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.layer-depth-1 {
+  transform: translateZ(10px);
+}
+
+.layer-depth-2 {
+  transform: translateZ(20px);
+}
+
+.layer-depth-3 {
+  transform: translateZ(30px);
 }
 
 .glow-effect {
@@ -521,4 +616,313 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Git-specific styles */
+.git-file-group {
+  @apply rounded-lg smooth-transition;
+}
+
+.git-file-group:hover {
+  background-color: color-mix(in srgb, var(--bg-secondary) 30%, transparent);
+}
+
+.git-file-item {
+  @apply rounded-lg px-3 py-2 smooth-transition cursor-pointer;
+}
+
+.git-file-item:hover {
+  background-color: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+}
+
+.git-diff-line-add {
+  @apply bg-green-500/10 text-green-400 dark:bg-green-900/20;
+}
+
+.git-diff-line-delete {
+  @apply bg-red-500/10 text-red-400 dark:bg-red-900/20;
+}
+
+.git-diff-line-normal {
+  color: var(--text-secondary);
+}
+
+.git-status-modified {
+  @apply text-yellow-500 dark:text-yellow-400;
+}
+
+.git-status-added {
+  @apply text-green-500 dark:text-green-400;
+}
+
+.git-status-deleted {
+  @apply text-red-500 dark:text-red-400;
+}
+
+.git-status-renamed {
+  @apply text-blue-500 dark:text-blue-400;
+}
+
+.git-status-untracked {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.git-status-conflicted {
+  @apply text-orange-500 dark:text-orange-400;
+}
+
+/* Enhanced animations for git operations */
+@keyframes git-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.git-loading {
+  animation: git-pulse 1.5s ease-in-out infinite;
+}
+
+/* iOS 26 Message Bubble Styles */
+.ios-message-bubble {
+  position: relative;
+  max-width: 280px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* iOS Message Bubble Tails */
+.message-bubble-tail-left::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: inherit;
+  border-bottom-right-radius: 16px 14px;
+}
+
+.message-bubble-tail-left::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -10px;
+  width: 10px;
+  height: 20px;
+  background: var(--bg-primary);
+  border-bottom-right-radius: 10px;
+}
+
+.message-bubble-tail-right::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: inherit;
+  border-bottom-left-radius: 16px 14px;
+}
+
+.message-bubble-tail-right::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -10px;
+  width: 10px;
+  height: 20px;
+  background: var(--bg-primary);
+  border-bottom-left-radius: 10px;
+}
+
+/* iOS Colors */
+.ios-bubble-user {
+  background: #0a7aff;
+  color: #ffffff;
+}
+
+.ios-bubble-assistant {
+  background: #e5e5ea;
+  color: #000000;
+}
+
+.dark .ios-bubble-user {
+  background: #0984ff;
+  color: #ffffff;
+}
+
+.dark .ios-bubble-assistant {
+  background: #2c2c2e;
+  color: #ffffff;
+}
+
+/* iOS Glass Effect */
+.ios-glass-effect {
+  background: rgba(26, 26, 26, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ios-glass-input {
+  background: rgba(26, 26, 26, 0.65);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Message Grouping Spacing */
+.message-group-first {
+  margin-bottom: 2px;
+}
+
+.message-group-middle {
+  margin-bottom: 2px;
+}
+
+.message-group-last {
+  margin-bottom: 16px;
+}
+
+.message-single {
+  margin-bottom: 16px;
+}
+
+/* iOS Spring Animation */
+@keyframes ios-spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-ios-spring {
+  animation: ios-spring-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* iOS Button Press Animation */
+.ios-button-press:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* iOS Touch Momentum Scroll */
+.ios-momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* Better scrollbar for git panels */
+.git-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.git-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.git-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.git-scrollbar::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+}
+
+/* Toast animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Modal animations for Search and Settings */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Tab transition animations for Settings page */
+@keyframes tab-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tab-fade-in {
+  animation: tab-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Skeleton loader animation */
+@keyframes skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton 1.5s ease-in-out infinite;
 }

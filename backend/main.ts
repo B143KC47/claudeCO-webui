@@ -41,7 +41,18 @@ import {
 } from "./handlers/sessions.ts";
 import { authHandler } from "./handlers/auth.ts";
 import { networkHandler } from "./handlers/network.ts";
-import { authMiddleware, rateLimitMiddleware, readRateLimitMiddleware } from "./middleware/auth.ts";
+import { wsHandler } from "./handlers/websocket.ts";
+import {
+  authMiddleware,
+  rateLimitMiddleware,
+  readRateLimitMiddleware,
+} from "./middleware/auth.ts";
+import {
+  corsHeaders,
+  requestId,
+  responseTime,
+  securityHeaders,
+} from "./middleware/security.ts";
 
 const args = await parseCliArgs();
 
@@ -56,15 +67,17 @@ const app = new Hono<ConfigContext>();
 // Store AbortControllers for each request (shared with chat handler)
 const requestAbortControllers = new Map<string, AbortController>();
 
-// CORS middleware
-app.use(
-  "*",
-  cors({
-    origin: "*",
-    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+// WebSocket endpoint MUST be registered BEFORE header middleware
+// This prevents the "headers immutable" error when upgrading connections
+app.get("/ws", wsHandler);
+
+// Request tracking middleware (applied after WebSocket)
+app.use("*", requestId);
+app.use("*", responseTime);
+
+// Security headers middleware (skip WebSocket - headers already sent)
+app.use("/api/*", securityHeaders);
+app.use("/api/*", corsHeaders());
 
 // Configuration middleware - makes app settings available to all handlers
 app.use("*", createConfigMiddleware({ debugMode: DEBUG_MODE, port: PORT }));
@@ -74,7 +87,8 @@ app.use("/api/*", authMiddleware);
 
 // Auth API routes (public, with rate limiting)
 // Apply different rate limits for read vs write operations
-app.get("/api/auth/devices", readRateLimitMiddleware(20, 60000)); // 20 requests per minute for reading devices
+// 60 req/min for reading devices (600 req/min for LAN IPs) - optimized for same-network QR code auth
+app.get("/api/auth/devices", readRateLimitMiddleware(60, 60000));
 app.use("/api/auth/*", rateLimitMiddleware(10, 60000)); // 10 requests per minute for other auth operations
 app.route("/api/auth", authHandler);
 

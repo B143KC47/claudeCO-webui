@@ -62,12 +62,31 @@ export interface DeviceAuthRequest {
   deviceType: "mobile" | "tablet" | "desktop";
   userAgent?: string;
   ipAddress?: string;
+  sessionToken?: string; // QR session token for validation
 }
 
 export interface DeviceAuthResponse {
   authToken: string;
   deviceId: string;
   status: "pending" | "approved" | "rejected";
+  expiresAt: string;
+  verificationCode?: string; // 6-digit code for two-way verification
+  sessionToken?: string; // Session token for tracking
+}
+
+// QR Session management for secure dynamic QR codes
+export interface QRSession {
+  sessionToken: string;
+  verificationCode: string;
+  deviceId?: string;
+  createdAt: string;
+  expiresAt: string;
+  used: boolean;
+}
+
+export interface QRSessionResponse {
+  sessionToken: string;
+  verificationCode: string;
   expiresAt: string;
 }
 
@@ -85,6 +104,7 @@ export interface Device {
   lastActiveAt: string;
   ipAddress?: string;
   userAgent?: string;
+  verificationCode?: string; // 6-digit code for verification
 }
 
 export interface DeviceListResponse {
@@ -96,3 +116,21 @@ export interface AuthorizeDeviceRequest {
   action: "approve" | "reject";
 }
 
+// Network types
+export interface NetworkUrl {
+  type: string;
+  url: string;
+  qrCode?: string;
+  recommended?: boolean; // Indicates if this URL is recommended for mobile devices
+}
+
+export interface NetworkInfo {
+  serverInfo: {
+    name: string;
+    version: string;
+    port: number;
+  };
+  urls: NetworkUrl[];
+  connectionToken: string;
+  timestamp: string;
+}

@@ -67,42 +67,84 @@ export function ChatInput({
   };
 
   return (
-    <div className="flex-shrink-0">
+    <div className="flex-shrink-0 pb-safe">
       <form onSubmit={handleSubmit} className="relative">
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-          placeholder={
-            isLoading && currentRequestId
-              ? `${t("chat.thinking")} (ESC)`
-              : t("chat.placeholder")
-          }
-          rows={1}
-          className={`w-full px-4 py-3 pr-32 glass-input text-primary placeholder-text-tertiary resize-none overflow-hidden min-h-[48px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px] smooth-transition rounded-2xl`}
-          disabled={isLoading}
-        />
-        <div className="absolute right-3 bottom-3 flex gap-2">
-          {isLoading && currentRequestId && (
+        <div className="relative ios-glass-input rounded-3xl shadow-lg hover:shadow-xl smooth-transition ring-2 ring-transparent focus-within:ring-accent focus-within:ring-opacity-50">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            placeholder={
+              isLoading && currentRequestId
+                ? `${t("chat.thinking")} (ESC)`
+                : t("chat.placeholder")
+            }
+            rows={1}
+            className={`
+              w-full px-6 py-4 pr-36
+              bg-transparent
+              text-primary text-[15px]
+              placeholder-text-tertiary
+              resize-none overflow-hidden
+              min-h-[60px] max-h-[${UI_CONSTANTS.TEXTAREA_MAX_HEIGHT}px]
+              smooth-transition
+              border-0 focus:outline-none
+              rounded-3xl
+            `}
+            disabled={isLoading}
+            aria-label="Message input"
+          />
+          <div className="absolute right-3 bottom-3 flex gap-2 items-center">
+            {isLoading && currentRequestId && (
+              <button
+                type="button"
+                onClick={onAbort}
+                className="p-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 smooth-transition rounded-2xl shadow-sm hover:shadow-md backdrop-blur-sm ios-button-press"
+                title="Stop (ESC)"
+                aria-label="Stop generating"
+              >
+                <StopIcon className="w-5 h-5" />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={onAbort}
-              className="p-2 glass-button text-accent glow-border smooth-transition rounded-xl"
-              title="Stop (ESC)"
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="
+                px-5 py-2.5
+                bg-gradient-primary
+                text-white
+                rounded-2xl
+                font-semibold
+                smooth-transition
+                glow-effect
+                ios-button-press
+                disabled:cursor-not-allowed
+                disabled:opacity-50
+                disabled:transform-none
+                hover:scale-105
+                text-[14px]
+                shadow-md
+                hover:shadow-lg
+              "
+              aria-label="Send message"
             >
-              <StopIcon className="w-4 h-4" />
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-pulse">●</span>
+                  <span className="animate-pulse animation-delay-200">●</span>
+                  <span className="animate-pulse animation-delay-400">●</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  {t("chat.send")}
+                  <span>→</span>
+                </span>
+              )}
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-2 bg-gradient-primary text-primary rounded-xl font-medium smooth-transition glow-effect disabled:cursor-not-allowed disabled:opacity-50 text-sm"
-          >
-            {isLoading ? "..." : t("chat.send")}
-          </button>
+          </div>
         </div>
       </form>
     </div>
