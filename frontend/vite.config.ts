@@ -29,6 +29,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        "/ws": {
+          target: `http://localhost:${apiPort}`,
+          ws: true, // Enable WebSocket proxying
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     test: {

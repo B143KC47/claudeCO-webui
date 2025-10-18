@@ -572,6 +572,130 @@ cd frontend && npm run dev      # Configures proxy to localhost:9000
    - Backend API: http://localhost:8080 (or PORT from .env file)
    - Mobile Auth: http://localhost:3000/mobile-auth (accessible from mobile devices)
 
+### WSL2 Networking Configuration
+
+If you're running on WSL2 (Windows Subsystem for Linux), additional setup is required for mobile device access:
+
+#### The Problem
+
+- WSL2 uses a virtual network that requires Windows firewall rules
+- Backend defaults to binding on all interfaces (0.0.0.0) for mobile access
+- Windows needs port forwarding rules to route traffic from your network to WSL
+
+#### Quick Setup (Windows PowerShell as Administrator)
+
+```powershell
+# Run the automated setup script
+cd /mnt/c/Users/YOUR_USERNAME/Desktop/project/web-application/claude-code-webui-main
+./setup-firewall.ps1
+```
+
+This script automatically:
+1. Creates Windows Firewall rules for ports 8080 (backend) and 3000 (frontend)
+2. Detects your WSL IP address
+3. Configures port forwarding from Windows → WSL
+4. Shows connection URLs for your mobile device
+
+#### Manual Configuration
+
+If the script doesn't work, configure manually:
+
+**1. Check your WSL IP**:
+```bash
+ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1
+# Example output: 172.27.210.241
+```
+
+**2. Check your Windows IP** (on same network as phone):
+```powershell
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -like "192.168.*"}
+# Example output: 192.168.1.100
+```
+
+**3. Add Windows Firewall Rules**:
+```powershell
+# Backend (port 8080)
+New-NetFirewallRule -DisplayName "Claude Web UI - Backend" `
+    -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
+
+# Frontend (port 3000)
+New-NetFirewallRule -DisplayName "Claude Web UI - Frontend" `
+    -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+
+**4. Configure Port Forwarding**:
+```powershell
+# Replace <WSL_IP> with your WSL IP from step 1
+netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=<WSL_IP>
+netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=<WSL_IP>
+```
+
+**5. Restart Backend**:
+```bash
+# Backend now binds to 0.0.0.0 by default
+cd backend && deno task dev
+```
+
+#### Connecting from Mobile
+
+After setup, your phone can connect using:
+- **Windows IP**: `http://192.168.1.100:3000` (recommended)
+- **WSL IP**: `http://172.27.210.241:3000` (direct, may not work on all networks)
+
+#### Troubleshooting
+
+**Backend not accessible from phone?**
+```bash
+# Check if backend is listening on all interfaces
+ss -tuln | grep 8080
+# Should show: 0.0.0.0:8080 (not 127.0.0.1:8080)
+```
+
+**Windows firewall blocking?**
+```powershell
+# Check firewall rules
+Get-NetFirewallRule -DisplayName "Claude Web UI*" | Format-Table Name,Enabled,Action
+
+# Test if port is open
+Test-NetConnection -ComputerName localhost -Port 8080
+```
+
+**Port forwarding not working?**
+```powershell
+# View current port forwarding rules
+netsh interface portproxy show v4tov4
+
+# Remove and re-add if needed
+netsh interface portproxy delete v4tov4 listenport=8080
+netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=<WSL_IP>
+```
+
+**WSL IP keeps changing?**
+
+WSL2 IP addresses can change after Windows restarts. Re-run the setup script or update port forwarding manually.
+
+#### Host Configuration
+
+The backend now accepts a `HOST` environment variable to control binding:
+
+```bash
+# Default: 0.0.0.0 (all interfaces - mobile access enabled)
+deno task dev
+
+# Localhost only (mobile access disabled)
+HOST=127.0.0.1 deno task dev
+
+# Specific interface
+HOST=192.168.1.100 deno task dev
+```
+
+For persistent configuration, add to `.env` file:
+```bash
+# .env
+HOST=0.0.0.0  # Default for mobile access
+PORT=8080
+```
+
 ### Project Structure
 
 ```

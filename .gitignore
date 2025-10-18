@@ -15,3 +15,11 @@ frontend/playwright/.cache/
 # Database files
 backend/auth.db
 *.db
+
+# Security files - NEVER commit these
+.jwt-secret
+*.key
+*.pem
+*.crt
+*.cert
+/certs/

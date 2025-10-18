@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { DeviceAuthResponse } from "../../../shared/types";
+import { api } from "../services/api";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 export const MobileAuth: React.FC = () => {
   const [step, setStep] = useState<"register" | "verify" | "complete">(
@@ -11,6 +13,33 @@ export const MobileAuth: React.FC = () => {
   const [authToken, setAuthToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+  // Only connect WebSocket after we have a valid deviceId (after registration)
+  // This prevents connecting with empty deviceId which causes backend tracking issues
+  const shouldConnectWebSocket = deviceId.length > 0 && step === "verify";
+
+  // WebSocket connection for real-time updates
+  // Conditionally initialized only when we have a deviceId
+  const { isConnected, connectionState } = useWebSocket({
+    deviceId: shouldConnectWebSocket ? deviceId : undefined,
+    clientType: "device",
+    onMessage: (message) => {
+      // Handle authorization updates
+      if (message.type === "approved" && message.authToken) {
+        setAuthToken(message.authToken);
+        setStep("complete");
+        // Save token to local storage
+        localStorage.setItem("authToken", message.authToken);
+        localStorage.setItem("deviceId", deviceId);
+        setLoading(false);
+      } else if (message.type === "rejected") {
+        setError("Device authorization was rejected");
+        setLoading(false);
+      }
+    },
+    autoReconnect: shouldConnectWebSocket,
+  });
 
   const detectDeviceType = () => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -19,29 +48,39 @@ export const MobileAuth: React.FC = () => {
     return "desktop";
   };
 
+  // Extract session token from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const session = params.get("session");
+    if (session) {
+      setSessionToken(session);
+    }
+  }, []);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deviceName,
-          deviceType: detectDeviceType(),
-          userAgent: navigator.userAgent,
-        }),
+      const data: DeviceAuthResponse = await api.auth.register({
+        deviceName,
+        deviceType: detectDeviceType(),
+        userAgent: navigator.userAgent,
+        sessionToken, // Include session token for validation
       });
-
-      if (!response.ok) throw new Error("Failed to register device");
-
-      const data: DeviceAuthResponse = await response.json();
       setDeviceId(data.deviceId);
+      // Pre-fill verification code if provided by backend
+      if (data.verificationCode) {
+        setVerificationCode(data.verificationCode);
+      }
       setStep("verify");
     } catch (err) {
-      setError("Failed to register device. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to register device. Please try again.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,34 +93,78 @@ export const MobileAuth: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          deviceId,
-          verificationCode,
-        }),
+      // Send verification code to backend
+      const data: DeviceAuthResponse = await api.auth.verify({
+        deviceId,
+        verificationCode,
       });
 
-      if (!response.ok) throw new Error("Failed to verify device");
+      console.log("Verification sent, waiting for approval...");
 
-      const data: DeviceAuthResponse = await response.json();
+      // Fallback to polling if WebSocket doesn't connect within 10 seconds
+      // This ensures the user isn't stuck if WebSocket fails
+      const fallbackTimer = setTimeout(() => {
+        if (!isConnected) {
+          console.warn("WebSocket not connected, falling back to polling...");
+          startPolling();
+        }
+      }, 10000);
 
-      if (data.status === "approved") {
-        setAuthToken(data.authToken);
-        setStep("complete");
+      // Cleanup timer if WebSocket connects
+      const checkConnection = setInterval(() => {
+        if (isConnected) {
+          clearTimeout(fallbackTimer);
+          clearInterval(checkConnection);
+        }
+      }, 1000);
 
-        // Save token to local storage
-        localStorage.setItem("claude-webui-auth-token", data.authToken);
-        localStorage.setItem("claude-webui-device-id", deviceId);
-      } else if (data.status === "rejected") {
-        setError("Device authorization was rejected");
-        setStep("register");
-      }
+      // Fallback polling function
+      const startPolling = async () => {
+        let attempts = 0;
+        const maxAttempts = 60; // 2 minutes max (2s interval)
+
+        const poll = async () => {
+          if (attempts >= maxAttempts) {
+            setError("Authorization timeout. Please try again.");
+            setLoading(false);
+            return;
+          }
+
+          try {
+            const statusData: DeviceAuthResponse =
+              await api.auth.verifyStatus(deviceId);
+
+            if (statusData.status === "approved" && statusData.authToken) {
+              // Success!
+              setAuthToken(statusData.authToken);
+              setStep("complete");
+              localStorage.setItem("authToken", statusData.authToken);
+              localStorage.setItem("deviceId", deviceId);
+              setLoading(false);
+            } else if (statusData.status === "rejected") {
+              setError("Device authorization was rejected");
+              setLoading(false);
+            } else {
+              // Still pending - continue polling
+              attempts++;
+              setTimeout(poll, 2000);
+            }
+          } catch (error) {
+            console.error("Polling error:", error);
+            attempts++;
+            setTimeout(poll, 2000);
+          }
+        };
+
+        poll();
+      };
     } catch (err) {
-      setError("Verification failed. Please check the code and try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Verification failed. Please check the code and try again.",
+      );
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };
@@ -138,29 +221,72 @@ export const MobileAuth: React.FC = () => {
               <form onSubmit={handleVerify}>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-                    Verification Code (if required)
+                    Verification Code *
                   </label>
                   <input
                     type="text"
                     value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder="Enter code"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    onChange={(e) =>
+                      setVerificationCode(e.target.value.toUpperCase())
+                    }
+                    placeholder="Enter 8-character code"
+                    required
+                    maxLength={8}
+                    pattern="[A-Z0-9]{8}"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center text-xl font-mono tracking-wider"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Enter the 8-character alphanumeric code displayed on the
+                    desktop
+                  </p>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || verificationCode.length !== 8}
                   className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Verifying..." : "Check Authorization Status"}
+                  {loading ? "Verifying..." : "Verify and Connect"}
                 </button>
               </form>
 
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
-                Waiting for approval from the main interface...
-              </p>
+              {loading ? (
+                <div className="mt-4 space-y-3">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Waiting for approval from desktop...
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                      Real-time updates enabled
+                    </p>
+                  </div>
+
+                  {/* WebSocket Connection Status */}
+                  <div className="flex items-center justify-center gap-2 text-xs">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        isConnected
+                          ? "bg-green-500"
+                          : "bg-yellow-500 animate-pulse"
+                      }`}
+                    ></div>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {connectionState === "connected"
+                        ? "Connected - Live updates active"
+                        : connectionState === "connecting"
+                          ? "Connecting to server..."
+                          : "Reconnecting..."}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                  Enter the verification code to continue...
+                </p>
+              )}
             </div>
           )}
 

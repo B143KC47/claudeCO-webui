@@ -159,26 +159,31 @@ export const networkHandler = new Hono<ConfigContext>()
     // Get all network interfaces
     const interfaces = await getNetworkInterfaces();
 
-    // Build connection URLs
-    const urls: { type: string; url: string; qrCode?: string }[] = [];
+    // Build connection URLs optimized for mobile access
+    // Following Linus's principle: "Make it obvious what will work"
+    const urls: { type: string; url: string; recommended?: boolean }[] = [];
 
-    // Add localhost URL
-    urls.push({
-      type: "localhost",
-      url: `http://localhost:${port}`,
-    });
-
-    // Add LAN URLs
+    // Add LAN URLs FIRST - these work best for mobile devices on same network
+    // Mobile devices connect directly to backend port (no Vite proxy overhead)
     for (const [name, addresses] of Object.entries(interfaces)) {
       for (const address of addresses) {
         if (address !== "127.0.0.1") {
           urls.push({
             type: "lan",
             url: `http://${address}:${port}`,
+            recommended: true, // Recommended for mobile devices
           });
         }
       }
     }
+
+    // Add localhost URL LAST - only works for desktop development
+    // Mobile devices physically cannot access desktop's localhost
+    urls.push({
+      type: "localhost",
+      url: `http://localhost:${port}`,
+      recommended: false, // NOT recommended for mobile - will fail
+    });
 
     // Add WAN URL if available (would need to be configured or detected)
     const wanUrl = Deno.env.get("PUBLIC_URL");
