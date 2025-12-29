@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import type { AllMessage } from "../../types";
+import type { AllMessage, CommandSuggestion } from "../../types";
 import {
   isChatMessage,
   isSystemMessage,
@@ -13,14 +13,22 @@ import {
   ToolResultMessageComponent,
   LoadingComponent,
 } from "../MessageComponents";
+import { CommandShowcase } from "./CommandShowcase";
 // import { UI_CONSTANTS } from "../../utils/constants"; // Unused for now
 
 interface ChatMessagesProps {
   messages: AllMessage[];
   isLoading: boolean;
+  suggestions?: CommandSuggestion[];
+  onCommandClick?: (command: string) => void;
 }
 
-export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+export function ChatMessages({
+  messages,
+  isLoading,
+  suggestions = [],
+  onCommandClick,
+}: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -108,7 +116,10 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
       className="flex-1 overflow-y-auto glass-card p-4 md:p-5 rounded-2xl flex flex-col min-h-0 ios-momentum-scroll"
     >
       {messages.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          suggestions={suggestions}
+          onCommandClick={onCommandClick}
+        />
       ) : (
         <>
           {/* Spacer div to push messages to the bottom */}
@@ -122,32 +133,53 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  suggestions: CommandSuggestion[];
+  onCommandClick?: (command: string) => void;
+}
+
+function EmptyState({ suggestions, onCommandClick }: EmptyStateProps) {
   return (
     <div className="flex-1 flex items-center justify-center text-center text-secondary animate-fade-in">
-      <div className="max-w-md mx-auto px-4">
-        <div className="text-7xl mb-8 opacity-70">
-          <span role="img" aria-label="chat icon" className="inline-block">
-            💬
-          </span>
+      <div className="w-full">
+        {/* Welcome Message */}
+        <div className="mb-10">
+          <div className="text-7xl mb-8 opacity-70">
+            <span role="img" aria-label="chat icon" className="inline-block">
+              💬
+            </span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gradient mb-4">
+            Start a conversation with Claude
+          </h2>
+          <p className="text-base md:text-lg mt-3 opacity-90 text-secondary leading-relaxed">
+            Ask me anything - I can help with coding, writing, analysis, and
+            more
+          </p>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-gradient mb-4">
-          Start a conversation with Claude
-        </h2>
-        <p className="text-base md:text-lg mt-3 opacity-90 text-secondary leading-relaxed">
-          Ask me anything - I can help with coding, writing, analysis, and more
-        </p>
-        <div className="mt-8 flex justify-center gap-3 flex-wrap">
-          <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
-            ✨ Code assistance
+
+        {/* Command Showcase */}
+        {suggestions.length > 0 && onCommandClick && (
+          <CommandShowcase
+            suggestions={suggestions}
+            onCommandClick={onCommandClick}
+          />
+        )}
+
+        {/* Capability Tags (shown if no suggestions) */}
+        {suggestions.length === 0 && (
+          <div className="mt-8 flex justify-center gap-3 flex-wrap">
+            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+              ✨ Code assistance
+            </div>
+            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+              📝 Writing help
+            </div>
+            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+              💡 Problem solving
+            </div>
           </div>
-          <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
-            📝 Writing help
-          </div>
-          <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
-            💡 Problem solving
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

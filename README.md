@@ -131,7 +131,31 @@ chmod +x claude-code-webui-macos-arm64
 # 在浏览器中打开 http://localhost:8080
 ```
 
-### Method 2: Development Mode | 方式二：开发模式运行
+### Method 2: Development Mode | 方式二:开发模式运行
+
+#### Option A: One-Line Launch (Recommended) | 选项A：一键启动（推荐）
+
+```bash
+# Clone the repository
+# 克隆项目
+git clone https://github.com/B143KC47/claudeCO-webui.git
+cd claudeCO-webui
+
+# Install dependencies
+# 安装依赖
+make install
+
+# Start both frontend and backend concurrently
+# 同时启动前端和后端
+make dev
+# OR / 或者
+npm run dev
+
+# Open browser to http://localhost:3000
+# 在浏览器中打开 http://localhost:3000
+```
+
+#### Option B: Manual Start | 选项B：手动启动
 
 ```bash
 # Clone the repository

@@ -48,6 +48,8 @@ build-backend:
 	cd backend && deno task build
 
 # Development
+dev:
+	npm run dev
 dev-frontend:
 	cd frontend && npm run dev
 dev-backend:

@@ -1,4 +1,5 @@
 .claude/
+node_modules/
 
 # Build artifacts
 dist/

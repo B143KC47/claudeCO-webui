@@ -6,6 +6,7 @@ export const API_CONFIG = {
     PROJECTS: "/api/projects",
     HISTORIES: "/api/projects",
     CONVERSATIONS: "/api/projects",
+    GIT_STATUS: "/api/git/status",
   },
 } as const;
 
@@ -39,4 +40,9 @@ export const getHistoriesUrl = (projectPath: string) => {
 export const getConversationUrl = (projectPath: string, sessionId: string) => {
   const encodedPath = encodeURIComponent(projectPath);
   return `${API_CONFIG.ENDPOINTS.CONVERSATIONS}/${encodedPath}/histories/${sessionId}`;
+};
+
+// Helper function to get git status URL
+export const getGitStatusUrl = () => {
+  return API_CONFIG.ENDPOINTS.GIT_STATUS;
 };

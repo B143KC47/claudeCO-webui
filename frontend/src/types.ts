@@ -150,6 +150,24 @@ export interface ListFilesResponse {
   parentPath?: string;
 }
 
+// Command Showcase types
+export type CommandCategory = "git" | "file" | "terminal" | "mcp" | "general";
+
+export interface CommandSuggestion {
+  icon: string;
+  label: string;
+  command: string;
+  description: string;
+  category: CommandCategory;
+}
+
+export interface CommandShowcaseContext {
+  hasGitRepo: boolean;
+  hasUnstagedChanges: boolean;
+  currentDirectory: string;
+  recentActivity: string[];
+}
+
 // Re-export shared types
 export type {
   StreamResponse,
