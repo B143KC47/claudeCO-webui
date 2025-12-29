@@ -19,6 +19,7 @@ import { usePermissions } from "../hooks/chat/usePermissions";
 import { useAbortController } from "../hooks/chat/useAbortController";
 import { useSessionPersistence } from "../hooks/useSessionPersistence";
 import { useCommandSuggestions } from "../hooks/useCommandSuggestions";
+import { useSlashCommands } from "../hooks/useSlashCommands";
 import { ThemeToggle } from "./chat/ThemeToggle";
 import { HistoryButton } from "./chat/HistoryButton";
 import { ChatInput } from "./chat/ChatInput";
@@ -121,6 +122,99 @@ export function ChatPage() {
     },
   });
 
+  // Slash command handlers
+  const handleClearCommand = useCallback(() => {
+    console.log("[SlashCommand] Clearing chat");
+    setMessages([]);
+    setHasShownInitMessage(false);
+    setHasReceivedInit(false);
+    setCurrentAssistantMessage(null);
+
+    // Add system message to indicate clear
+    addMessage({
+      type: "system",
+      subtype: "info",
+      message: "Chat cleared. Session continues with existing context.",
+      timestamp: Date.now(),
+    });
+  }, [setMessages, setHasShownInitMessage, setHasReceivedInit, setCurrentAssistantMessage, addMessage]);
+
+  const handleNewCommand = useCallback(async () => {
+    console.log("[SlashCommand] Starting new session");
+    setMessages([]);
+    setHasShownInitMessage(false);
+    setHasReceivedInit(false);
+    setCurrentAssistantMessage(null);
+
+    // Create new session
+    const newSessionId = await createNewSession();
+    setCurrentSessionId(newSessionId);
+
+    // Update URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set("sessionId", newSessionId);
+    setSearchParams(newSearchParams);
+
+    // Add system message
+    addMessage({
+      type: "system",
+      subtype: "info",
+      message: `New session started: ${newSessionId.substring(0, 8)}...`,
+      timestamp: Date.now(),
+    });
+  }, [
+    setMessages,
+    setHasShownInitMessage,
+    setHasReceivedInit,
+    setCurrentAssistantMessage,
+    createNewSession,
+    setCurrentSessionId,
+    searchParams,
+    setSearchParams,
+    addMessage,
+  ]);
+
+  const handleHelpCommand = useCallback(() => {
+    console.log("[SlashCommand] Showing help");
+    const helpMessage = `
+**Available Slash Commands:**
+
+**Client-Side Commands** (handled locally):
+• \`/clear\` - Clear the chat display
+• \`/new\` - Start a new session
+• \`/help\` - Show this help message
+
+**Claude CLI Commands** (sent to backend):
+• \`/model [name]\` - Switch Claude model (opus, sonnet, haiku)
+• \`/cost\` - Show token usage and costs
+• \`/permissions\` - Manage tool permissions
+• \`/agents\` - View available subagents
+• \`/plugin [action]\` - Manage plugins
+• \`/resume [session-id]\` - Resume a previous session
+
+**Custom Commands:**
+• Project commands from \`.claude/commands/\`
+• Personal commands from \`~/.claude/commands/\`
+• MCP commands: \`/mcp__servername__command\`
+• Plugin commands: \`/pluginname:command\`
+
+Type \`/\` to see all available commands with autocomplete.
+    `.trim();
+
+    addMessage({
+      type: "chat",
+      role: "assistant",
+      content: helpMessage,
+      timestamp: Date.now(),
+    });
+  }, [addMessage]);
+
+  const { processCommand } = useSlashCommands({
+    onClear: handleClearCommand,
+    onNew: handleNewCommand,
+    onHelp: handleHelpCommand,
+  });
+
   const handlePermissionError = useCallback(
     (toolName: string, pattern: string, toolUseId: string) => {
       showPermissionDialog(toolName, pattern, toolUseId);
@@ -136,6 +230,16 @@ export function ChatPage() {
     ) => {
       const content = messageContent || input.trim();
       if (!content || isLoading) return;
+
+      // Process slash commands
+      const commandResult = processCommand(content);
+
+      if (commandResult.handled && !commandResult.shouldSendToBackend) {
+        // Command was handled client-side, don't send to backend
+        console.log(`[SlashCommand] Handled locally: ${content}`);
+        if (!messageContent) clearInput();
+        return;
+      }
 
       // Use existing session ID or let Claude SDK create one
       const sessionId = currentSessionId;
@@ -299,6 +403,7 @@ export function ChatPage() {
       hasShownInitMessage,
       currentAssistantMessage,
       workingDirectory,
+      processCommand,
       generateRequestId,
       clearInput,
       startRequest,
@@ -470,26 +575,26 @@ export function ChatPage() {
     <div className="fullscreen-page mobile-optimized">
       <div className="w-full h-full flex flex-col px-2 sm:px-4 md:px-6 py-4 md:py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 md:mb-8 flex-shrink-0">
+        <div className="flex items-center justify-between mb-6 md:mb-10 flex-shrink-0 pb-4 border-b border-accent/10">
           <div className="flex items-center gap-4">
             {isHistoryView && (
               <button
                 onClick={handleBackToChat}
-                className={BUTTON_STYLES.ICON_BUTTON}
+                className={`${BUTTON_STYLES.ICON_BUTTON} modern-button hover:bg-accent/15`}
                 aria-label={t("chat.backToChat")}
               >
                 <ChevronLeftIcon className="w-5 h-5 text-accent" />
               </button>
             )}
             <div>
-              <h1 className="text-primary text-3xl font-bold tracking-tight text-gradient">
+              <h1 className="text-primary text-4xl md:text-5xl font-black tracking-tight enhanced-text-gradient drop-shadow-lg">
                 {isHistoryView
                   ? t("chat.conversationHistory")
                   : t("chat.title")}
               </h1>
               {workingDirectory && (
-                <p className="text-tertiary text-sm font-mono mt-1">
-                  {workingDirectory}
+                <p className="text-tertiary text-sm font-mono mt-2 px-3 py-1.5 bg-black-quaternary/50 rounded-lg inline-block border border-accent/10">
+                  📁 {workingDirectory}
                 </p>
               )}
             </div>
@@ -498,10 +603,10 @@ export function ChatPage() {
             {!isHistoryView && <HistoryButton onClick={handleHistoryClick} />}
             <button
               onClick={handleOpenSettings}
-              className={BUTTON_STYLES.ICON_BUTTON}
+              className={`${BUTTON_STYLES.ICON_BUTTON} modern-button hover:bg-accent/15 hover:scale-110`}
               aria-label={t("nav.settings")}
             >
-              <CogIcon className="w-5 h-5 text-accent" />
+              <CogIcon className="w-6 h-6 text-accent" />
             </button>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
@@ -517,18 +622,18 @@ export function ChatPage() {
         ) : (
           <>
             {/* Tab Navigation */}
-            <div className="flex-1 glass-card rounded-xl glow-effect flex flex-col min-h-0">
+            <div className="flex-1 glass-card rounded-3xl glow-effect flex flex-col min-h-0 border border-accent/15 card-transition shadow-xl">
               {/* Tab Header */}
-              <div className="flex items-center justify-between border-b border-accent/20 px-3 md:px-4 py-2 md:py-3 flex-shrink-0">
-                <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between border-b border-accent/15 px-4 md:px-5 py-3 md:py-4 flex-shrink-0 bg-gradient-to-r from-black-secondary/50 to-transparent backdrop-blur-xl">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setActiveTab("chat")}
                     className={`
-                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      flex items-center gap-2.5 px-3 md:px-4 py-2.5 rounded-xl smooth-transition text-sm font-bold
                       ${
                         activeTab === "chat"
-                          ? "bg-gradient-primary text-primary glow-effect"
-                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                          ? "bg-gradient-primary text-white shadow-lg scale-105"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50 hover:scale-105"
                       }
                     `}
                   >
@@ -538,11 +643,11 @@ export function ChatPage() {
                   <button
                     onClick={() => setActiveTab("browser")}
                     className={`
-                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      flex items-center gap-2.5 px-3 md:px-4 py-2.5 rounded-xl smooth-transition text-sm font-bold
                       ${
                         activeTab === "browser"
-                          ? "bg-gradient-primary text-primary glow-effect"
-                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                          ? "bg-gradient-primary text-white shadow-lg scale-105"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50 hover:scale-105"
                       }
                     `}
                   >
@@ -554,11 +659,11 @@ export function ChatPage() {
                   <button
                     onClick={() => setActiveTab("terminal")}
                     className={`
-                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      flex items-center gap-2.5 px-3 md:px-4 py-2.5 rounded-xl smooth-transition text-sm font-bold
                       ${
                         activeTab === "terminal"
-                          ? "bg-gradient-primary text-primary glow-effect"
-                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                          ? "bg-gradient-primary text-white shadow-lg scale-105"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50 hover:scale-105"
                       }
                     `}
                   >
@@ -570,11 +675,11 @@ export function ChatPage() {
                   <button
                     onClick={() => setActiveTab("explorer")}
                     className={`
-                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      flex items-center gap-2.5 px-3 md:px-4 py-2.5 rounded-xl smooth-transition text-sm font-bold
                       ${
                         activeTab === "explorer"
-                          ? "bg-gradient-primary text-primary glow-effect"
-                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                          ? "bg-gradient-primary text-white shadow-lg scale-105"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50 hover:scale-105"
                       }
                     `}
                   >
@@ -586,11 +691,11 @@ export function ChatPage() {
                   <button
                     onClick={() => setActiveTab("git")}
                     className={`
-                      flex items-center gap-2 px-2 md:px-3 py-2 rounded-lg smooth-transition text-sm font-medium
+                      flex items-center gap-2.5 px-3 md:px-4 py-2.5 rounded-xl smooth-transition text-sm font-bold
                       ${
                         activeTab === "git"
-                          ? "bg-gradient-primary text-primary glow-effect"
-                          : "text-secondary hover:text-primary hover:bg-black-secondary/50"
+                          ? "bg-gradient-primary text-white shadow-lg scale-105"
+                          : "text-secondary hover:text-primary hover:bg-black-secondary/50 hover:scale-105"
                       }
                     `}
                   >
@@ -601,14 +706,14 @@ export function ChatPage() {
 
                 <button
                   onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
-                  className="p-2 text-tertiary hover:text-primary smooth-transition rounded-lg hover:bg-black-secondary/50"
+                  className="p-2.5 text-tertiary hover:text-primary smooth-transition rounded-xl hover:bg-black-secondary/50 modern-button"
                   aria-label={
                     isToolbarCollapsed
                       ? t("chat.expandToolbar")
                       : t("chat.collapseToolbar")
                   }
                 >
-                  <XMarkIcon className="w-4 h-4" />
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
 
@@ -635,6 +740,7 @@ export function ChatPage() {
                         input={input}
                         isLoading={isLoading}
                         currentRequestId={currentRequestId}
+                        workingDirectory={workingDirectory}
                         onInputChange={setInput}
                         onSubmit={() => sendMessage()}
                         onAbort={handleAbort}

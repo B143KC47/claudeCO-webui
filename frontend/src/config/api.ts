@@ -7,6 +7,7 @@ export const API_CONFIG = {
     HISTORIES: "/api/projects",
     CONVERSATIONS: "/api/projects",
     GIT_STATUS: "/api/git/status",
+    COMMANDS_DISCOVER: "/api/commands/discover",
   },
 } as const;
 
@@ -45,4 +46,9 @@ export const getConversationUrl = (projectPath: string, sessionId: string) => {
 // Helper function to get git status URL
 export const getGitStatusUrl = () => {
   return API_CONFIG.ENDPOINTS.GIT_STATUS;
+};
+
+// Helper function to get commands discover URL
+export const getCommandsDiscoverUrl = () => {
+  return API_CONFIG.ENDPOINTS.COMMANDS_DISCOVER;
 };

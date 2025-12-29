@@ -134,3 +134,30 @@ export interface NetworkInfo {
   connectionToken: string;
   timestamp: string;
 }
+
+// Command discovery types
+export interface ClaudeCommand {
+  command: string;
+  description: string;
+  category: "builtin" | "project" | "personal" | "mcp" | "plugin";
+  source?: string;
+  argumentHint?: string;
+  allowedTools?: string[];
+  model?: string;
+}
+
+export interface CommandDiscoveryRequest {
+  workingDirectory?: string;
+}
+
+export interface CommandDiscoveryResponse {
+  commands: ClaudeCommand[];
+  count: number;
+  categoryCounts: {
+    builtin: number;
+    project: number;
+    personal: number;
+    mcp: number;
+    plugin: number;
+  };
+}

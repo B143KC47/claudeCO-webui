@@ -39,6 +39,7 @@ import {
   handleSessionGet,
   handleSessionSave,
 } from "./handlers/sessions.ts";
+import { handleCommandsDiscovery } from "./handlers/commands.ts";
 import { authHandler } from "./handlers/auth.ts";
 import { networkHandler } from "./handlers/network.ts";
 import { wsHandler } from "./handlers/websocket.ts";
@@ -117,6 +118,9 @@ app.post(
   "/api/chat",
   (c) => handleChatRequest(c, requestAbortControllers),
 );
+
+// Commands discovery API
+app.post("/api/commands/discover", (c) => handleCommandsDiscovery(c));
 
 // Settings API routes
 app.get("/api/mcp", async (c) => {

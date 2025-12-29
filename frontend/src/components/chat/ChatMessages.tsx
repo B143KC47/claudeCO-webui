@@ -113,7 +113,10 @@ export function ChatMessages({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex-1 overflow-y-auto glass-card p-4 md:p-5 rounded-2xl flex flex-col min-h-0 ios-momentum-scroll"
+      className="flex-1 overflow-y-auto glass-card p-5 md:p-6 rounded-3xl flex flex-col min-h-0 ios-momentum-scroll card-transition border border-accent/10"
+      style={{
+        background: "linear-gradient(135deg, rgba(26, 26, 26, 0.85) 0%, rgba(18, 18, 18, 0.90) 100%)",
+      }}
     >
       {messages.length === 0 ? (
         <EmptyState
@@ -140,19 +143,19 @@ interface EmptyStateProps {
 
 function EmptyState({ suggestions, onCommandClick }: EmptyStateProps) {
   return (
-    <div className="flex-1 flex items-center justify-center text-center text-secondary animate-fade-in">
-      <div className="w-full">
+    <div className="flex-1 flex items-center justify-center text-center text-secondary animate-scale-in">
+      <div className="w-full max-w-2xl">
         {/* Welcome Message */}
-        <div className="mb-10">
-          <div className="text-7xl mb-8 opacity-70">
+        <div className="mb-12">
+          <div className="text-8xl mb-10 opacity-80 animate-float-gentle">
             <span role="img" aria-label="chat icon" className="inline-block">
               💬
             </span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gradient mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold enhanced-text-gradient mb-6 tracking-tight">
             Start a conversation with Claude
           </h2>
-          <p className="text-base md:text-lg mt-3 opacity-90 text-secondary leading-relaxed">
+          <p className="text-lg md:text-xl mt-4 opacity-90 text-secondary leading-relaxed max-w-xl mx-auto">
             Ask me anything - I can help with coding, writing, analysis, and
             more
           </p>
@@ -168,14 +171,14 @@ function EmptyState({ suggestions, onCommandClick }: EmptyStateProps) {
 
         {/* Capability Tags (shown if no suggestions) */}
         {suggestions.length === 0 && (
-          <div className="mt-8 flex justify-center gap-3 flex-wrap">
-            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+          <div className="mt-10 flex justify-center gap-4 flex-wrap">
+            <div className="glass-card px-6 py-3 rounded-full text-sm text-accent font-medium card-transition border border-accent/20 backdrop-blur-xl hover:border-accent/40 hover:bg-accent/5">
               ✨ Code assistance
             </div>
-            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+            <div className="glass-card px-6 py-3 rounded-full text-sm text-accent font-medium card-transition border border-accent/20 backdrop-blur-xl hover:border-accent/40 hover:bg-accent/5">
               📝 Writing help
             </div>
-            <div className="glass-card px-4 py-2 rounded-full text-xs text-accent">
+            <div className="glass-card px-6 py-3 rounded-full text-sm text-accent font-medium card-transition border border-accent/20 backdrop-blur-xl hover:border-accent/40 hover:bg-accent/5">
               💡 Problem solving
             </div>
           </div>

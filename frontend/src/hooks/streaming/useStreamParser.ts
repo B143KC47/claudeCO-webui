@@ -206,7 +206,12 @@ export function useStreamParser() {
   );
 
   const processStreamLine = useCallback(
-    (line: string, context: StreamingContext) => {
+    (line: string, context: StreamingContext) =>{
+      // Skip empty lines or SSE event markers
+      if (!line.trim() || line.includes("event: close")) {
+        return;
+      }
+
       try {
         const data: StreamResponse = JSON.parse(line);
 
@@ -241,8 +246,21 @@ export function useStreamParser() {
         console.error("Failed to parse stream line:", parseError);
         console.error("Raw line:", line);
 
-        // Only show parse error if it's not an empty line or connection close
-        if (line.trim() && !line.includes("event: close")) {
+        // Check if this looks like a warning or error message from Claude CLI
+        // (contains emojis, Chinese characters, or warning indicators)
+        const isWarningMessage = /[⚠️❌🔴]|warning|error|失败|错误/i.test(line);
+
+        if (isWarningMessage) {
+          // Display the raw message as a warning
+          const warningMessage: SystemMessage = {
+            type: "system",
+            subtype: "info",
+            message: `Claude CLI Warning: ${line.trim()}`,
+            timestamp: Date.now(),
+          };
+          context.addMessage(warningMessage);
+        } else {
+          // Only show generic parse error for actual JSON parse failures
           const errorMessage: SystemMessage = {
             type: "error",
             subtype: "stream_error",
